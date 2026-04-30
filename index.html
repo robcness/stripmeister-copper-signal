@@ -54,6 +54,35 @@
           </button>
         </div>
 
+        <div class="currency-toolbar" role="group" aria-label="Display currency">
+          <p class="metric-label currency-toolbar-label">Show prices in</p>
+          <div class="currency-toggle" role="radiogroup" aria-label="Currency" data-testid="currency-toggle">
+            <button
+              type="button"
+              class="currency-toggle-btn is-active"
+              role="radio"
+              aria-checked="true"
+              data-currency="USD"
+              data-testid="currency-toggle-usd"
+            >
+              USD<span class="currency-toggle-dollar" aria-hidden="true">$</span>
+            </button>
+            <button
+              type="button"
+              class="currency-toggle-btn"
+              role="radio"
+              aria-checked="false"
+              data-currency="CAD"
+              data-testid="currency-toggle-cad"
+            >
+              CAD<span class="currency-toggle-dollar" aria-hidden="true">$</span>
+            </button>
+          </div>
+          <p class="currency-toolbar-meta" data-testid="text-fx-meta">
+            <span data-field="fx-meta-text">Reference only · USD shown natively.</span>
+          </p>
+        </div>
+
         <div class="signal-grid">
           <article class="signal-card primary-signal" aria-labelledby="signal-label">
             <p id="signal-label" class="metric-label">Today’s buying signal</p>
@@ -112,7 +141,7 @@
 
           <article class="market-card compact" aria-labelledby="market-label">
             <p id="market-label" class="metric-label">Today's copper reference</p>
-            <strong>$<span data-field="copper-price">5.98</span><span class="unit">/lb</span></strong>
+            <strong>$<span data-field="copper-price" data-testid="text-copper-price">5.98</span><span class="unit" data-field="unit-per-lb" data-testid="unit-copper-price">USD/lb</span></strong>
             <div class="delta-row" role="group" aria-label="Copper price change over 30 days, 12 months, and 5 years">
               <span class="metric-delta positive" title="30-day change" data-field="delta-30d-chip"><span data-field="delta-30d">+6.06%</span> <span class="delta-unit">· 30d</span></span>
               <span class="metric-delta positive" title="12-month rolling change" data-field="delta-12mo-chip"><span data-field="delta-12mo">+29.7%</span> <span class="delta-unit">· 12mo</span></span>
@@ -123,21 +152,21 @@
 
           <article class="market-card compact kpi-spread" aria-labelledby="spread-label">
             <p id="spread-label" class="metric-label">Strip value delta</p>
-            <strong class="spread-delta" data-field="strip-delta-wrap"><span class="sign" aria-hidden="true" data-field="strip-delta-sign">+</span>$<span data-field="strip-delta-abs">3.30</span><span class="unit">/lb</span></strong>
-            <div class="spread-rail" aria-label="Insulated copper wire $1.75 per pound versus bare bright copper $5.05 per pound" data-field="spread-rail">
+            <strong class="spread-delta" data-field="strip-delta-wrap"><span class="sign" aria-hidden="true" data-field="strip-delta-sign">+</span>$<span data-field="strip-delta-abs" data-testid="text-strip-delta">3.30</span><span class="unit" data-field="unit-per-lb" data-testid="unit-strip-delta">USD/lb</span></strong>
+            <div class="spread-rail" aria-label="Insulated copper wire versus bare bright copper reference rates" data-field="spread-rail">
               <span class="spread-end">
                 <small>Insulated</small>
-                <b>$<span data-field="insulated-price">1.75</span></b>
+                <b>$<span data-field="insulated-price" data-testid="text-insulated-price">1.75</span></b>
               </span>
               <svg class="spread-arrow" viewBox="0 0 32 12" aria-hidden="true">
                 <path d="M0 6h28M22 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
               <span class="spread-end">
                 <small>Bare bright</small>
-                <b>$<span data-field="bare-bright-price">5.05</span></b>
+                <b>$<span data-field="bare-bright-price" data-testid="text-bare-bright-price">5.05</span></b>
               </span>
             </div>
-            <p>Reference spread only; check your local yard. Every <span data-field="spread-unit-lbs">50</span> lb recovered ≈ $<span data-field="spread-per-50lb">165</span> in raw material spread.</p>
+            <p>Reference spread only (<span data-field="unit-currency-code" data-testid="text-currency-code">USD</span>); check your local yard. Every <span data-field="spread-unit-lbs">50</span> lb recovered ≈ $<span data-field="spread-per-50lb" data-testid="text-spread-per-50lb">165</span> in raw material spread.</p>
           </article>
         </div>
       </section>
@@ -235,7 +264,7 @@
                 <tbody>
                   <tr>
                     <th scope="row">Copper reference</th>
-                    <td class="num" data-field="method-copper-price">$5.98/lb</td>
+                    <td class="num" data-field="method-copper-price" data-testid="text-method-copper-price">$5.98 USD/lb</td>
                     <td>Reference spot rate from public copper futures (HG=F monthly close, 2026-04-30).</td>
                     <td><a href="https://tradingeconomics.com/commodity/copper" target="_blank" rel="noopener noreferrer">Trading Economics</a> · retail yard prices vary regionally.</td>
                   </tr>
@@ -259,7 +288,7 @@
                   </tr>
                   <tr>
                     <th scope="row">Strip value delta</th>
-                    <td class="num pos" data-field="method-strip-delta">+$3.30/lb</td>
+                    <td class="num pos" data-field="method-strip-delta" data-testid="text-method-strip-delta">+$3.30 USD/lb</td>
                     <td>Bare bright reference − insulated reference. See stacked arithmetic below.</td>
                     <td><a href="https://rockawayrecycling.com/metal/1-bare-bright-wire/" target="_blank" rel="noopener noreferrer">Rockaway</a>, <a href="https://iscrapapp.com/metals/bare-bright-copper/" target="_blank" rel="noopener noreferrer">iScrap</a>, <a href="https://www.scrapmonster.com/scrap-prices/category/Copper-Scrap/128/1/1" target="_blank" rel="noopener noreferrer">ScrapMonster</a> · reference rates only.</td>
                   </tr>
@@ -283,7 +312,7 @@
             </p>
 
             <figure class="calc-block" aria-label="Strip value delta calculation">
-              <pre class="calc-stack"><span class="calc-row"><span class="calc-op" aria-hidden="true"> </span><span class="calc-label">Bare bright reference</span><span class="calc-val" data-field="calc-bare-bright">$5.05/lb</span></span><span class="calc-row"><span class="calc-op" aria-hidden="true">−</span><span class="calc-label">Insulated wire reference</span><span class="calc-val" data-field="calc-insulated">$1.75/lb</span></span><span class="calc-row calc-rule"><span class="calc-op" aria-hidden="true">=</span><span class="calc-label"><strong>Strip value delta</strong></span><span class="calc-val" data-field="calc-strip-delta"><strong>+$3.30/lb</strong></span></span><span class="calc-row calc-extension"><span class="calc-op" aria-hidden="true">×</span><span class="calc-label" data-field="calc-spread-label">50 lb recovered</span><span class="calc-val" data-field="calc-spread-value">≈ $165 raw-material spread</span></span></pre>
+              <pre class="calc-stack" data-testid="block-calc"><span class="calc-row"><span class="calc-op" aria-hidden="true"> </span><span class="calc-label">Bare bright reference</span><span class="calc-val" data-field="calc-bare-bright" data-testid="text-calc-bare-bright">$5.05 USD/lb</span></span><span class="calc-row"><span class="calc-op" aria-hidden="true">−</span><span class="calc-label">Insulated wire reference</span><span class="calc-val" data-field="calc-insulated" data-testid="text-calc-insulated">$1.75 USD/lb</span></span><span class="calc-row calc-rule"><span class="calc-op" aria-hidden="true">=</span><span class="calc-label"><strong>Strip value delta</strong></span><span class="calc-val" data-field="calc-strip-delta" data-testid="text-calc-strip-delta"><strong>+$3.30 USD/lb</strong></span></span><span class="calc-row calc-extension"><span class="calc-op" aria-hidden="true">×</span><span class="calc-label" data-field="calc-spread-label">50 lb recovered</span><span class="calc-val" data-field="calc-spread-value" data-testid="text-calc-spread-value">≈ $165 USD raw-material spread</span></span></pre>
               <figcaption>Reference rates only. Not a guarantee of yard price or return on investment.</figcaption>
             </figure>
 

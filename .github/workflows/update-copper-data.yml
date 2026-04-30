@@ -23,6 +23,10 @@ on:
         description: "Manual override for insulated wire reference (USD/lb). Leave blank to skip."
         required: false
         default: ""
+      fx_usd_cad_override:
+        description: "Manual override for USD→CAD rate (e.g. 1.37). Leave blank to use Bank of Canada or previous value."
+        required: false
+        default: ""
   schedule:
     # Daily at 13:30 UTC ≈ 09:30 ET, after US copper futures open.
     # Adjust freely; GitHub may delay scheduled runs under load.
@@ -58,6 +62,7 @@ jobs:
           COPPER_OVERRIDE: ${{ github.event.inputs.copper_override }}
           BARE_BRIGHT_OVERRIDE: ${{ github.event.inputs.bare_bright_override }}
           INSULATED_OVERRIDE: ${{ github.event.inputs.insulated_override }}
+          FX_USD_CAD_OVERRIDE: ${{ github.event.inputs.fx_usd_cad_override }}
         run: node scripts/update-copper-data.mjs
 
       - name: Commit changes (if any)

@@ -40,6 +40,13 @@ not an ROI promise.
 - **CTAs:** two buttons in one grouped area — `Calculate your wire recovery` (blue primary) and
   `Find your StripMeister model` (outlined). No duplicate CTAs anywhere on the page.
 - **Methodology + sources:** a single compact `<details>` accordion at the bottom.
+- **Currency toggle (USD / CAD):** a compact pill toggle sits above the key metrics row.
+  USD is the default (the underlying source data is USD). Selecting CAD re-renders the
+  copper reference, bare bright, insulated, strip value delta, 50 lb spread, and the
+  methodology / calculation values from USD/lb to CAD/lb using a single FX rate stored
+  in `data.fx.usd_to_cad`. Percent deltas and the signal score are dimensionless and
+  never change. Labels always show explicit `USD/lb` or `CAD/lb` to avoid implying a
+  guaranteed yard price.
 
 ## CTA destinations
 
@@ -47,6 +54,84 @@ not an ROI promise.
 - Find your StripMeister model →
   - desktop: `https://www.stripmeister.com#shopify-section-template--18912940359751__sm_desktop_all_products_v2_QU9pWA`
   - mobile (auto-swapped by `app.js`): `https://www.stripmeister.com#shopify-section-template--18912940359751__sm_mobile_products_v3_Da6cGT`
+
+## Currency conversion (USD / CAD)
+
+The widget supports a simple display-only currency toggle. The default and source
+currency is **USD**; **CAD** is a reference conversion only.
+
+### Source of the FX rate
+
+- **Primary:** [Bank of Canada Valet API](https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1)
+  (`FXUSDCAD`). Free, no API key, official daily reference rate.
+- **Fallback:** the previous value in `data/copper-signal.json` is preserved when the
+  fetch fails, with `fetch_status.fx_usd_cad` set to `bank-of-canada-failed` so the
+  staleness is auditable.
+- **Manual override:** set `FX_USD_CAD_OVERRIDE` (env or workflow_dispatch input) to
+  pin the rate to a specific value. Wins over the fetched value.
+
+The rate is stored in the JSON under `fx`:
+
+```jsonc
+"fx": {
+  "base_currency": "USD",
+  "quote_currency": "CAD",
+  "usd_to_cad": 1.3624,
+  "as_of_date": "2026-04-30",
+  "source": {
+    "label": "Bank of Canada Valet — FXUSDCAD",
+    "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
+    "caveat": "Daily reference rate from Bank of Canada. Not a transactional rate; banks and yards apply their own spreads. Display-only conversion."
+  },
+  "fetch_status": "bank-of-canada",
+  "manual_override": null
+}
+```
+
+### What converts and what does not
+
+| Field                        | Converts? | Rounding              |
+| ---------------------------- | --------- | --------------------- |
+| Copper reference price       | Yes       | 2 decimal places (× rate) |
+| Bare bright reference        | Yes       | 2 decimal places          |
+| Insulated wire reference     | Yes       | 2 decimal places          |
+| Strip value delta            | Yes       | 2 decimal places          |
+| 50 lb spread                 | Yes       | rounded to whole dollar    |
+| History closes (calc text)   | Yes       | 3 decimal places (kept tight to preserve calc readability) |
+| Methodology + calc block     | Yes (USD/lb → CAD/lb labels) | inherits per-row rule |
+| 30d / 12mo / 5yr percent     | **No** — dimensionless   | n/a                       |
+| Signal score (82 / 100)      | **No** — dimensionless   | n/a                       |
+
+Conversion is a single multiplication: `cad_value = usd_value * fx.usd_to_cad`.
+Rounding is applied **after** the multiplication, per the table above. The labels
+(`USD/lb` vs. `CAD/lb`) are driven by the same toggle state so the displayed unit
+always matches the displayed value.
+
+### Caveats explicitly disclosed in-app
+
+- The toggle's caption (`fx-meta-text`) shows the live rate, the source
+  (“Bank of Canada Valet — FXUSDCAD”), and the rate's `as_of_date` whenever CAD is
+  selected.
+- The text “**Display only — not a yard quote.**” is rendered alongside the rate in
+  CAD mode to make clear this is reference conversion, not a buyer’s price.
+- If `data.fx.usd_to_cad` is missing or invalid (e.g. fallback HTML render with no
+  live data), clicking the CAD button flips the visual toggle state but the numbers
+  remain in their static USD form and the caption reads
+  “CAD rate unavailable · showing USD reference values.” The widget never displays
+  unconverted USD values under a CAD label.
+
+### Test IDs
+
+For automated checks, every converted value carries a stable `data-testid`:
+
+- `currency-toggle`, `currency-toggle-usd`, `currency-toggle-cad`
+- `text-fx-meta` (caption with rate + source + date)
+- `text-copper-price`, `unit-copper-price`
+- `text-strip-delta`, `unit-strip-delta`
+- `text-bare-bright-price`, `text-insulated-price`, `text-spread-per-50lb`
+- `text-currency-code` (the small “(USD)” / “(CAD)” marker in the spread copy)
+- `text-method-copper-price`, `text-method-strip-delta`
+- `block-calc`, `text-calc-bare-bright`, `text-calc-insulated`, `text-calc-strip-delta`, `text-calc-spread-value`
 
 ## Prototype scoring model
 
@@ -121,8 +206,20 @@ hardcoded HTML values remain, so the page always renders.
   - [ScrapMonster — copper scrap](https://www.scrapmonster.com/scrap-prices/category/Copper-Scrap/128/1/1)
 
   These are intentionally **not auto-fetched.** The pages are HTML-only,
-  layouts change without notice, and headline rates are reference-only —
-  local yards quote daily and apply their own grading. Auto-publishing a
+  layouts change without notice, and headline rates are reference-only.
+
+- **USD/CAD foreign exchange (Bank of Canada Valet — official, free, no key):**
+  - [Valet observations — FXUSDCAD](https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1)
+
+  Daily reference rate, not a transactional / dealing rate. The updater
+  fetches the most recent observation, sanity-bounds it to a plausible range
+  (0.5 – 3.0 USD/CAD), and writes it into `data.fx.usd_to_cad` along with the
+  observation date. On any failure it preserves the previous value and stamps
+  `fetch_status.fx_usd_cad = 'bank-of-canada-failed'`. A `FX_USD_CAD_OVERRIDE`
+  manual override is supported for emergencies.
+
+  These reference-rate caveats also apply elsewhere in this section:
+  Local yards quote daily and apply their own grading. Auto-publishing a
   brittle scrape risks misleading users. Update via the workflow_dispatch
   inputs `bare_bright_override` / `insulated_override`, or by editing
   `data/copper-signal.json` directly. The widget already discloses these as
@@ -159,14 +256,15 @@ Run the script locally, then commit the JSON.
 # Conservative: only refreshes timestamps.
 node scripts/update-copper-data.mjs
 
-# Live copper fetch (Yahoo Finance HG=F):
+# Live copper fetch (Yahoo Finance HG=F) AND USD/CAD (Bank of Canada Valet):
 FETCH_SOURCES=1 node scripts/update-copper-data.mjs
 
 # Manual price overrides (e.g. for scrap references, which are never
-# auto-fetched):
+# auto-fetched). FX_USD_CAD_OVERRIDE pins the FX rate when set.
 COPPER_OVERRIDE=6.12 \
 BARE_BRIGHT_OVERRIDE=5.10 \
 INSULATED_OVERRIDE=1.80 \
+FX_USD_CAD_OVERRIDE=1.37 \
 node scripts/update-copper-data.mjs
 ```
 

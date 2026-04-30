@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-04-30T22:23:22.261Z",
+  "generated_at": "2026-04-30T22:51:10.265Z",
   "last_updated": "2026-04-30",
-  "last_checked": "2026-04-30T22:23:22.261Z",
+  "last_checked": "2026-04-30T22:51:10.265Z",
   "copper": {
-    "reference_price_usd_per_lb": 6.034,
+    "reference_price_usd_per_lb": 6.0295,
     "as_of_date": "2026-04-30",
-    "delta_30d_pct": 7.99,
-    "delta_12mo_pct": 32.32,
-    "delta_5yr_pct": 34.72,
+    "delta_30d_pct": 7.91,
+    "delta_12mo_pct": 32.23,
+    "delta_5yr_pct": 34.62,
     "history": {
       "close_2021_04_30": 4.468,
       "close_2025_04_30": 4.609,
       "close_2026_04_30": 5.976,
       "latest": {
         "date": "2026-04-30",
-        "close": 6.034
+        "close": 6.0295
       },
       "d30": {
         "date": "2026-03-31",
@@ -129,10 +129,24 @@
       }
     ]
   },
+  "fx": {
+    "base_currency": "USD",
+    "quote_currency": "CAD",
+    "usd_to_cad": 1.3624,
+    "as_of_date": "2026-04-30",
+    "source": {
+      "label": "Bank of Canada Valet — FXUSDCAD",
+      "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
+      "caveat": "Daily noon-style reference rate from Bank of Canada. Not a transactional rate; banks and yards apply their own spreads. Display-only conversion."
+    },
+    "fetch_status": "bank-of-canada",
+    "manual_override": 1.39
+  },
   "fetch_status": {
     "copper_reference": "yahoo-finance",
     "bare_bright": "manual",
     "insulated_wire": "manual",
-    "notes": "Live fetch attempted via Yahoo Finance HG=F. Scrap reference values are manual by design — see scripts/update-copper-data.mjs header for rationale."
+    "fx_usd_cad": "bank-of-canada",
+    "notes": "Live fetch attempted via Yahoo Finance HG=F and Bank of Canada Valet (FXUSDCAD). Scrap reference values are manual by design — see scripts/update-copper-data.mjs header for rationale."
   }
 }

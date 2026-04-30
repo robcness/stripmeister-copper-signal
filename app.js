@@ -7,22 +7,27 @@
 //    values, chips, KPI, methodology table, and calculation block. If the
 //    fetch fails (file missing, offline preview, CORS via file://), the
 //    hardcoded HTML values remain in place so the widget still renders.
+// 4. Currency toggle: convert all USD/lb reference values into CAD/lb on
+//    demand. Conversion is display-only and uses the rate stored in
+//    data.fx.usd_to_cad (sourced from Bank of Canada Valet by the updater).
+//    Percent deltas and the signal score are unit-agnostic and never change.
 
 // ----- Theme toggle ---------------------------------------------------------
 const root = document.documentElement;
-const button = document.querySelector('[data-theme-toggle]');
-const icon = document.querySelector('[data-theme-icon]');
+const themeButton = document.querySelector('[data-theme-toggle]');
+const themeIcon = document.querySelector('[data-theme-icon]');
 
 function setTheme(nextTheme) {
   root.setAttribute('data-theme', nextTheme);
-  if (icon) icon.textContent = 'Theme';
-  if (button) button.setAttribute('aria-label', `Switch to ${nextTheme === 'dark' ? 'light' : 'dark'} theme`);
+  if (themeIcon) themeIcon.textContent = 'Theme';
+  if (themeButton)
+    themeButton.setAttribute('aria-label', `Switch to ${nextTheme === 'dark' ? 'light' : 'dark'} theme`);
 }
 
 const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 setTheme(prefersDark ? 'dark' : 'light');
 
-button?.addEventListener('click', () => {
+themeButton?.addEventListener('click', () => {
   const current = root.getAttribute('data-theme') || 'dark';
   setTheme(current === 'dark' ? 'light' : 'dark');
 });
@@ -32,41 +37,32 @@ const modelFinderLink = document.querySelector('[data-testid="link-model-finder"
 
 function updateModelFinderAnchor() {
   if (!modelFinderLink) return;
-  const desktopAnchor = 'https://www.stripmeister.com#shopify-section-template--18912940359751__sm_desktop_all_products_v2_QU9pWA';
-  const mobileAnchor = 'https://www.stripmeister.com#shopify-section-template--18912940359751__sm_mobile_products_v3_Da6cGT';
+  const desktopAnchor =
+    'https://www.stripmeister.com#shopify-section-template--18912940359751__sm_desktop_all_products_v2_QU9pWA';
+  const mobileAnchor =
+    'https://www.stripmeister.com#shopify-section-template--18912940359751__sm_mobile_products_v3_Da6cGT';
   modelFinderLink.href = window.matchMedia('(max-width: 768px)').matches ? mobileAnchor : desktopAnchor;
 }
 
 updateModelFinderAnchor();
 window.addEventListener('resize', updateModelFinderAnchor);
 
-// ----- Live-data hydration --------------------------------------------------
+// ===========================================================================
+// Currency + hydration
+// ===========================================================================
 //
-// Fetches data/copper-signal.json and writes values into elements tagged with
-// `data-field="..."`. Every step is best-effort and silently falls back to
-// the hardcoded HTML if anything is missing.
+// State:
+//   currentData     — the parsed copper-signal.json (or null until loaded)
+//   currentCurrency — 'USD' (default) or 'CAD'
 //
-// Field map (data-field → JSON path):
-//   copper-price            → copper.reference_price_usd_per_lb (number, 2 dp)
-//   delta-30d               → copper.delta_30d_pct (signed %, 2 dp)
-//   delta-12mo              → copper.delta_12mo_pct (signed %, 1 dp)
-//   delta-5yr               → copper.delta_5yr_pct (signed %, 1 dp)
-//   delta-30d-chip / delta-12mo-chip / delta-5yr-chip
-//                           → toggle .positive / .negative class from status
-//   strip-delta-sign        → "+" or "−" depending on sign
-//   strip-delta-abs         → |scrap.strip_value_delta_usd_per_lb| (2 dp)
-//   strip-delta-wrap        → toggle .positive / .negative class
-//   bare-bright-price       → scrap.bare_bright_usd_per_lb (2 dp)
-//   insulated-price         → scrap.insulated_wire_usd_per_lb (2 dp)
-//   spread-unit-lbs         → scrap.spread_unit_lbs
-//   spread-per-50lb         → scrap.spread_per_50lb_usd
-//   signal-score            → signal.score
-//   signal-score-max        → signal.score_max
-//   signal-label            → signal.label
-//   signal-headline         → signal.headline
-//   signal-summary          → signal.summary
-//   method-* / calc-*       → formatted strings written into the methodology
-//                              table and stacked calculation block.
+// Whenever either changes we re-run render(). Render is idempotent: it always
+// rewrites the same set of [data-field] elements from currentData, applying
+// the FX conversion when currentCurrency === 'CAD'.
+
+let currentData = null;
+let currentCurrency = 'USD';
+
+// ----- Formatting helpers --------------------------------------------------
 
 function fmtMoney(n, dp = 2) {
   if (typeof n !== 'number' || !Number.isFinite(n)) return null;
@@ -75,7 +71,7 @@ function fmtMoney(n, dp = 2) {
 
 function fmtSignedPct(n, dp = 2) {
   if (typeof n !== 'number' || !Number.isFinite(n)) return null;
-  const sign = n > 0 ? '+' : (n < 0 ? '' : ''); // negative sign comes from toFixed naturally
+  const sign = n > 0 ? '+' : ''; // negative sign comes from toFixed naturally
   return `${sign}${n.toFixed(dp)}%`;
 }
 
@@ -111,13 +107,101 @@ function deriveStatus(n) {
   return 'flat';
 }
 
-function hydrate(data) {
+// ----- Currency conversion --------------------------------------------------
+//
+// Conversion is a single multiply by `rate`. For per-pound values we keep two
+// decimal places (the format the widget already uses for USD/lb). For the
+// 50-lb spread we round to a whole dollar.
+//
+// Rounding rules:
+//   - per-lb values:  round( usd * rate, 2 )    e.g. $5.05 → C$6.88
+//   - 50 lb spread:   round( usd * rate, 0 )    e.g. $165  → C$225
+//   - copper price:   round( usd * rate, 2 )
+//   - history closes: round( usd * rate, 3 ) for the methodology calc text
+//
+// Percent deltas and the signal score are dimensionless; they are NEVER
+// converted.
+
+function convertPerLb(usdPerLb, rate) {
+  if (typeof usdPerLb !== 'number' || !Number.isFinite(usdPerLb)) return null;
+  if (typeof rate !== 'number' || !Number.isFinite(rate)) return null;
+  return Math.round(usdPerLb * rate * 100) / 100;
+}
+
+function convertSpread(usdSpread, rate) {
+  if (typeof usdSpread !== 'number' || !Number.isFinite(usdSpread)) return null;
+  if (typeof rate !== 'number' || !Number.isFinite(rate)) return null;
+  return Math.round(usdSpread * rate);
+}
+
+function convertHistoryClose(usdClose, rate) {
+  if (typeof usdClose !== 'number' || !Number.isFinite(usdClose)) return null;
+  if (typeof rate !== 'number' || !Number.isFinite(rate)) return null;
+  return Math.round(usdClose * rate * 1000) / 1000;
+}
+
+// ----- Render ---------------------------------------------------------------
+//
+// Field map (data-field → JSON path, in displayed currency):
+//   copper-price            → copper.reference_price_*_per_lb (2 dp)
+//   delta-30d/12mo/5yr      → copper.delta_*_pct (unit-agnostic, never converted)
+//   delta-*-chip            → toggle .positive / .negative class from status
+//   strip-delta-sign        → "+" or "−" depending on sign
+//   strip-delta-abs         → |scrap.strip_value_delta_*_per_lb| (2 dp)
+//   strip-delta-wrap        → toggle .positive / .negative class
+//   bare-bright-price       → scrap.bare_bright_*_per_lb (2 dp)
+//   insulated-price         → scrap.insulated_wire_*_per_lb (2 dp)
+//   spread-unit-lbs         → scrap.spread_unit_lbs (unit-agnostic)
+//   spread-per-50lb         → scrap.spread_per_50lb_* (whole dollar)
+//   signal-score / -max     → signal.score / score_max (unit-agnostic)
+//   signal-label/-headline/-summary → signal.* (text-only)
+//   unit-per-lb             → "USD/lb" or "CAD/lb"
+//   unit-currency-code      → "USD" or "CAD"
+//   fx-meta-text            → "Reference only · USD shown natively." (USD)
+//                              or "1 USD ≈ X.XXXX CAD · Bank of Canada YYYY-MM-DD" (CAD)
+//   method-* / calc-*       → formatted strings written into the methodology
+//                              table and stacked calculation block.
+
+function render() {
+  const data = currentData;
   if (!data || typeof data !== 'object') return;
+
+  const currency = currentCurrency === 'CAD' ? 'CAD' : 'USD';
+  const fx = data.fx || {};
+  const rate = currency === 'CAD' ? Number(fx.usd_to_cad) : 1;
+  const hasValidRate = currency === 'USD' || (Number.isFinite(rate) && rate > 0);
+
+  // If user requested CAD but we have no valid rate, fall back silently to USD
+  // for the actual numbers; the toggle UI will reflect the original choice.
+  const effectiveCurrency = hasValidRate ? currency : 'USD';
+  const effectiveRate = hasValidRate ? rate : 1;
+
+  // ---- Currency labels ----------------------------------------------------
+  const unitPerLb = `${effectiveCurrency}/lb`;
+  setText('unit-per-lb', unitPerLb);
+  setText('unit-currency-code', effectiveCurrency);
+
+  // ---- FX meta (caption) --------------------------------------------------
+  const fxAsOf = fx.as_of_date || '';
+  const fxLabel = fx.source?.label || 'Bank of Canada';
+  let fxMeta;
+  if (effectiveCurrency === 'USD') {
+    fxMeta = 'Reference only · USD shown natively. Not a yard quote.';
+  } else if (Number.isFinite(rate) && rate > 0) {
+    const asOfTxt = fxAsOf ? ` · ${fxAsOf}` : '';
+    fxMeta = `1 USD ≈ ${rate.toFixed(4)} CAD · ${fxLabel}${asOfTxt}. Display only — not a yard quote.`;
+  } else {
+    fxMeta = 'CAD rate unavailable · showing USD reference values.';
+  }
+  setText('fx-meta-text', fxMeta);
 
   // ---- Copper market card -------------------------------------------------
   const c = data.copper || {};
-  setText('copper-price', fmtMoney(c.reference_price_usd_per_lb, 2));
+  const copperUsd = c.reference_price_usd_per_lb;
+  const copperShown = effectiveCurrency === 'CAD' ? convertPerLb(copperUsd, effectiveRate) : copperUsd;
+  setText('copper-price', fmtMoney(copperShown, 2));
 
+  // Percent deltas — never converted.
   const delta30 = fmtSignedPct(c.delta_30d_pct, 2);
   const delta12 = fmtSignedPct(c.delta_12mo_pct, 1);
   const delta5 = fmtSignedPct(c.delta_5yr_pct, 1);
@@ -125,24 +209,37 @@ function hydrate(data) {
   setText('delta-12mo', delta12);
   setText('delta-5yr', delta5);
 
-  const statuses = (c.deltas_status || {});
+  const statuses = c.deltas_status || {};
   setStatus('delta-30d-chip', statuses['30d'] || deriveStatus(c.delta_30d_pct));
   setStatus('delta-12mo-chip', statuses['12mo'] || deriveStatus(c.delta_12mo_pct));
   setStatus('delta-5yr-chip', statuses['5yr'] || deriveStatus(c.delta_5yr_pct));
 
   // ---- Strip value delta KPI ---------------------------------------------
   const s = data.scrap || {};
-  const stripDelta = s.strip_value_delta_usd_per_lb;
-  if (typeof stripDelta === 'number' && Number.isFinite(stripDelta)) {
-    const sign = stripDelta >= 0 ? '+' : '−';
+  const stripDeltaUsd = s.strip_value_delta_usd_per_lb;
+  const bareBrightUsd = s.bare_bright_usd_per_lb;
+  const insulatedUsd = s.insulated_wire_usd_per_lb;
+  const spreadUsd = s.spread_per_50lb_usd;
+
+  const stripDeltaShown =
+    effectiveCurrency === 'CAD' ? convertPerLb(stripDeltaUsd, effectiveRate) : stripDeltaUsd;
+  const bareBrightShown =
+    effectiveCurrency === 'CAD' ? convertPerLb(bareBrightUsd, effectiveRate) : bareBrightUsd;
+  const insulatedShown =
+    effectiveCurrency === 'CAD' ? convertPerLb(insulatedUsd, effectiveRate) : insulatedUsd;
+  const spreadShown =
+    effectiveCurrency === 'CAD' ? convertSpread(spreadUsd, effectiveRate) : spreadUsd;
+
+  if (typeof stripDeltaShown === 'number' && Number.isFinite(stripDeltaShown)) {
+    const sign = stripDeltaShown >= 0 ? '+' : '−';
     setText('strip-delta-sign', sign);
-    setText('strip-delta-abs', fmtMoney(Math.abs(stripDelta), 2));
-    setStatus('strip-delta-wrap', s.strip_value_delta_status || deriveStatus(stripDelta));
+    setText('strip-delta-abs', fmtMoney(Math.abs(stripDeltaShown), 2));
+    setStatus('strip-delta-wrap', s.strip_value_delta_status || deriveStatus(stripDeltaShown));
   }
-  setText('bare-bright-price', fmtMoney(s.bare_bright_usd_per_lb, 2));
-  setText('insulated-price', fmtMoney(s.insulated_wire_usd_per_lb, 2));
+  setText('bare-bright-price', fmtMoney(bareBrightShown, 2));
+  setText('insulated-price', fmtMoney(insulatedShown, 2));
   if (typeof s.spread_unit_lbs === 'number') setText('spread-unit-lbs', s.spread_unit_lbs);
-  if (typeof s.spread_per_50lb_usd === 'number') setText('spread-per-50lb', s.spread_per_50lb_usd);
+  if (typeof spreadShown === 'number') setText('spread-per-50lb', spreadShown);
 
   // ---- Primary signal -----------------------------------------------------
   const sig = data.signal || {};
@@ -153,48 +250,48 @@ function hydrate(data) {
   if (sig.summary) setText('signal-summary', sig.summary);
 
   // ---- Methodology table -------------------------------------------------
-  if (typeof c.reference_price_usd_per_lb === 'number') {
-    setText('method-copper-price', `$${fmtMoney(c.reference_price_usd_per_lb, 2)}/lb`);
+  if (typeof copperShown === 'number') {
+    setText('method-copper-price', `$${fmtMoney(copperShown, 2)} ${unitPerLb}`);
   }
   if (delta30) setText('method-delta-30d', delta30);
   if (delta12) setText('method-delta-12mo', delta12);
   if (delta5) setText('method-delta-5yr', delta5);
-  if (typeof stripDelta === 'number') {
-    const sign = stripDelta >= 0 ? '+' : '−';
-    setText('method-strip-delta', `${sign}$${fmtMoney(Math.abs(stripDelta), 2)}/lb`);
+  if (typeof stripDeltaShown === 'number') {
+    const sign = stripDeltaShown >= 0 ? '+' : '−';
+    setText('method-strip-delta', `${sign}$${fmtMoney(Math.abs(stripDeltaShown), 2)} ${unitPerLb}`);
   }
   if (typeof sig.score === 'number' && typeof sig.score_max === 'number') {
     setText('method-signal-score', `${sig.score} / ${sig.score_max}`);
   }
 
-  // 12mo / 5yr calculation strings.
-  //
-  // Two history shapes are supported:
-  //   - New (live updater):  history.latest / history.y1 / history.y5 with
-  //                          { date, close } objects, dates stamped at
-  //                          fetch time so they always reflect the actual
-  //                          anchor day.
-  //   - Legacy (prototype):  history.close_<YYYY_MM_DD> as flat numbers.
-  //
-  // Prefer the new shape; fall back to the legacy keys.
+  // 12mo / 5yr calculation strings — convert the historical anchor closes
+  // alongside the latest close so the math reads in the displayed currency,
+  // but the percent result remains identical (ratio is unit-free).
   const hist = c.history || {};
   const latestObj = hist.latest && typeof hist.latest === 'object' ? hist.latest : null;
   const y1Obj = hist.y1 && typeof hist.y1 === 'object' ? hist.y1 : null;
   const y5Obj = hist.y5 && typeof hist.y5 === 'object' ? hist.y5 : null;
 
-  const cur = latestObj?.close ?? hist.close_2026_04_30;
+  const curUsd = latestObj?.close ?? hist.close_2026_04_30;
   const curDate = latestObj?.date;
-  const prev1y = y1Obj?.close ?? hist.close_2025_04_30;
+  const prev1yUsd = y1Obj?.close ?? hist.close_2025_04_30;
   const prev1yDate = y1Obj?.date;
-  const prev5y = y5Obj?.close ?? hist.close_2021_04_30;
+  const prev5yUsd = y5Obj?.close ?? hist.close_2021_04_30;
   const prev5yDate = y5Obj?.date;
+
+  const conv = (n) =>
+    effectiveCurrency === 'CAD' ? convertHistoryClose(n, effectiveRate) : n;
+
+  const cur = conv(curUsd);
+  const prev1y = conv(prev1yUsd);
+  const prev5y = conv(prev5yUsd);
 
   if ([cur, prev1y].every((n) => typeof n === 'number')) {
     const fromLabel = prev1yDate || '2025-04-30';
     const toLabel = curDate || '2026-04-30';
     setText(
       'method-delta-12mo-calc',
-      `(${cur} − ${prev1y}) ÷ ${prev1y}. Close ${fromLabel} $${prev1y} → close ${toLabel} $${cur}.`
+      `(${cur} − ${prev1y}) ÷ ${prev1y}. Close ${fromLabel} $${prev1y} → close ${toLabel} $${cur} (${effectiveCurrency}).`
     );
   }
   if ([cur, prev5y].every((n) => typeof n === 'number')) {
@@ -202,40 +299,84 @@ function hydrate(data) {
     const toLabel = curDate || '2026-04-30';
     setText(
       'method-delta-5yr-calc',
-      `(${cur} − ${prev5y}) ÷ ${prev5y}. Close ${fromLabel} $${prev5y} → close ${toLabel} $${cur}.`
+      `(${cur} − ${prev5y}) ÷ ${prev5y}. Close ${fromLabel} $${prev5y} → close ${toLabel} $${cur} (${effectiveCurrency}).`
     );
   }
 
   // ---- Stacked calc block ------------------------------------------------
-  if (typeof s.bare_bright_usd_per_lb === 'number') {
-    setText('calc-bare-bright', `$${fmtMoney(s.bare_bright_usd_per_lb, 2)}/lb`);
+  if (typeof bareBrightShown === 'number') {
+    setText('calc-bare-bright', `$${fmtMoney(bareBrightShown, 2)} ${unitPerLb}`);
   }
-  if (typeof s.insulated_wire_usd_per_lb === 'number') {
-    setText('calc-insulated', `$${fmtMoney(s.insulated_wire_usd_per_lb, 2)}/lb`);
+  if (typeof insulatedShown === 'number') {
+    setText('calc-insulated', `$${fmtMoney(insulatedShown, 2)} ${unitPerLb}`);
   }
-  if (typeof stripDelta === 'number') {
-    const sign = stripDelta >= 0 ? '+' : '−';
-    setHTML('calc-strip-delta', `<strong>${sign}$${fmtMoney(Math.abs(stripDelta), 2)}/lb</strong>`);
+  if (typeof stripDeltaShown === 'number') {
+    const sign = stripDeltaShown >= 0 ? '+' : '−';
+    setHTML(
+      'calc-strip-delta',
+      `<strong>${sign}$${fmtMoney(Math.abs(stripDeltaShown), 2)} ${unitPerLb}</strong>`
+    );
   }
   if (typeof s.spread_unit_lbs === 'number') {
     setText('calc-spread-label', `${s.spread_unit_lbs} lb recovered`);
   }
-  if (typeof s.spread_per_50lb_usd === 'number') {
-    setText('calc-spread-value', `≈ $${s.spread_per_50lb_usd} raw-material spread`);
+  if (typeof spreadShown === 'number') {
+    setText('calc-spread-value', `≈ $${spreadShown} ${effectiveCurrency} raw-material spread`);
   }
 }
+
+// ----- Currency toggle wiring -----------------------------------------------
+
+function setCurrency(nextCurrency) {
+  const next = nextCurrency === 'CAD' ? 'CAD' : 'USD';
+  if (currentCurrency === next) return;
+  currentCurrency = next;
+
+  const buttons = document.querySelectorAll('[data-currency]');
+  buttons.forEach((btn) => {
+    const isActive = btn.getAttribute('data-currency') === next;
+    btn.classList.toggle('is-active', isActive);
+    btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+  });
+
+  render();
+}
+
+function bindCurrencyToggle() {
+  const buttons = document.querySelectorAll('[data-currency]');
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-currency') || 'USD';
+      // If user clicks CAD but we have no rate yet, still flip the visual
+      // state — render() will gracefully fall back to USD numbers and
+      // surface a "rate unavailable" message in the meta caption.
+      setCurrency(target);
+    });
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const next = currentCurrency === 'USD' ? 'CAD' : 'USD';
+        setCurrency(next);
+        const targetBtn = document.querySelector(`[data-currency="${next}"]`);
+        if (targetBtn) targetBtn.focus();
+      }
+    });
+  });
+}
+
+bindCurrencyToggle();
+
+// ----- Live data fetch ------------------------------------------------------
 
 async function loadCopperSignal() {
   try {
     const res = await fetch('./data/copper-signal.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    hydrate(data);
+    currentData = data;
+    render();
   } catch (err) {
     // Silent fallback — hardcoded HTML values remain visible.
-    // Use console.info (not error) so this does not show as a red error
-    // in the embed host's console when running from file:// or when the
-    // JSON is intentionally absent.
     if (typeof console !== 'undefined' && console.info) {
       console.info('[copper-signal] Live data unavailable; using static fallback.', err && err.message);
     }

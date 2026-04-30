@@ -53,21 +53,41 @@
  * if no override is supplied.
  *
  * --------------------------------------------------------------------------
+ * USD/CAD foreign exchange (display-only conversion)
+ * --------------------------------------------------------------------------
+ *
+ * Primary source: Bank of Canada Valet API
+ *   https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1
+ *
+ *   - Free, no API key, official Bank of Canada published rate.
+ *   - Daily reference rate (USD -> CAD), not a transactional / dealing rate.
+ *   - Returned as JSON: observations[0].FXUSDCAD.v as a string.
+ *
+ * The widget uses this rate strictly to render the same USD/lb metrics in
+ * CAD/lb when the user flips a toggle. It is a display conversion, never a
+ * yard quote. If the fetch fails, the script preserves the previous rate
+ * and stamps `fetch_status.fx_usd_cad = 'bank-of-canada-failed'` so the
+ * front-end can disclose the staleness via the rate's `as_of_date`.
+ *
+ * --------------------------------------------------------------------------
  * Environment flags
  * --------------------------------------------------------------------------
  *
- *   FETCH_SOURCES=1     Attempt to fetch live copper price from Yahoo.
+ *   FETCH_SOURCES=1     Attempt to fetch live copper price from Yahoo AND
+ *                       USD/CAD from Bank of Canada.
  *                       Default: 0 (timestamps only, market values unchanged).
  *   COPPER_OVERRIDE     Manual override for copper reference price (USD/lb).
  *                       Wins over the fetched value.
  *   BARE_BRIGHT_OVERRIDE / INSULATED_OVERRIDE
  *                       Manual override for the two scrap reference values.
+ *   FX_USD_CAD_OVERRIDE Manual override for USD→CAD rate. Wins over fetch.
  *
  * Usage:
  *
  *   node scripts/update-copper-data.mjs                   # safe: timestamps only
- *   FETCH_SOURCES=1 node scripts/update-copper-data.mjs   # fetch live copper price
+ *   FETCH_SOURCES=1 node scripts/update-copper-data.mjs   # fetch copper + fx
  *   COPPER_OVERRIDE=6.12 node scripts/update-copper-data.mjs
+ *   FX_USD_CAD_OVERRIDE=1.37 node scripts/update-copper-data.mjs
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
@@ -80,6 +100,9 @@ const DATA_PATH = resolve(__dirname, '..', 'data', 'copper-signal.json');
 
 const YAHOO_CHART_URL =
   'https://query1.finance.yahoo.com/v8/finance/chart/HG=F?interval=1d&range=5y';
+
+const BOC_FX_URL =
+  'https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1';
 
 // Polite UA — many CDNs block default Node UA strings.
 const FETCH_HEADERS = {
@@ -189,6 +212,58 @@ async function fetchYahooCopper() {
 }
 
 // ---------------------------------------------------------------------------
+// Bank of Canada USD/CAD fetcher
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the most recent USD/CAD reference rate from Bank of Canada Valet.
+ *
+ * Returns { rate: number, dateIso: string } on success, or null on any
+ * failure. Never throws. Sanity-bounds the rate to a plausible range so a
+ * malformed response cannot publish a wildly wrong number.
+ */
+async function fetchBankOfCanadaUsdCad() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(BOC_FX_URL, {
+      headers: FETCH_HEADERS,
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      console.warn(`[update-copper-data] BoC FX HTTP ${res.status}`);
+      return null;
+    }
+    const json = await res.json();
+    const obs = Array.isArray(json?.observations) ? json.observations : [];
+    if (obs.length === 0) {
+      console.warn('[update-copper-data] BoC FX response missing observations');
+      return null;
+    }
+    const last = obs[obs.length - 1];
+    const rateRaw = last?.FXUSDCAD?.v;
+    const dateIso = last?.d;
+    const rate = typeof rateRaw === 'string' ? Number(rateRaw) : Number(rateRaw);
+    if (!Number.isFinite(rate) || rate < 0.5 || rate > 3.0) {
+      // USD/CAD has historically lived in roughly 0.9–1.6. A rate outside
+      // 0.5–3.0 is almost certainly a parsing or upstream error.
+      console.warn('[update-copper-data] BoC FX implausible rate:', rateRaw);
+      return null;
+    }
+    if (typeof dateIso !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
+      console.warn('[update-copper-data] BoC FX missing date');
+      return null;
+    }
+    return { rate, dateIso };
+  } catch (err) {
+    console.warn('[update-copper-data] BoC FX fetch failed:', err?.message || err);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Pure helpers
 // ---------------------------------------------------------------------------
 
@@ -254,6 +329,13 @@ async function main() {
   const copperOverride = readNumberEnv('COPPER_OVERRIDE');
   const bareBrightOverride = readNumberEnv('BARE_BRIGHT_OVERRIDE');
   const insulatedOverride = readNumberEnv('INSULATED_OVERRIDE');
+  const fxOverride = readNumberEnv('FX_USD_CAD_OVERRIDE');
+
+  // FX (USD→CAD) defaults
+  const existingFx = data?.fx || {};
+  let fxRate = typeof existingFx.usd_to_cad === 'number' ? existingFx.usd_to_cad : null;
+  let fxAsOf = existingFx.as_of_date || null;
+  let fxStatus = data?.fetch_status?.fx_usd_cad || existingFx.fetch_status || 'manual';
 
   let copperFetchStatus = data?.fetch_status?.copper_reference || 'manual';
   // Scrap statuses: never auto-fetched, but they may be overridden manually.
@@ -272,6 +354,17 @@ async function main() {
   let delta5 = null;
 
   if (fetchSources) {
+    // FX fetch from Bank of Canada (independent of copper fetch).
+    const fx = await fetchBankOfCanadaUsdCad();
+    if (fx) {
+      fxRate = round(fx.rate, 4);
+      fxAsOf = fx.dateIso;
+      fxStatus = 'bank-of-canada';
+    } else {
+      fxStatus = 'bank-of-canada-failed';
+      // Preserve previous rate — better stale than wrong.
+    }
+
     const y = await fetchYahooCopper();
     if (y && typeof y.latest === 'number' && Number.isFinite(y.latest)) {
       copperPrice = round(y.latest, 4);
@@ -328,6 +421,11 @@ async function main() {
     insulated = round(insulatedOverride, 2);
     insulatedStatus = 'manual-override';
   }
+  if (fxOverride !== null && fxOverride > 0.5 && fxOverride < 3.0) {
+    fxRate = round(fxOverride, 4);
+    fxAsOf = todayDate();
+    fxStatus = 'manual-override';
+  }
 
   // --- Recompute spread --------------------------------------------------
   const stripDelta =
@@ -370,14 +468,30 @@ async function main() {
       spread_per_50lb_usd: spreadPerUnit,
       spread_unit_lbs: unitLbs,
     },
+    fx: {
+      ...existingFx,
+      base_currency: 'USD',
+      quote_currency: 'CAD',
+      usd_to_cad: fxRate,
+      as_of_date: fxAsOf,
+      source: existingFx.source || {
+        label: 'Bank of Canada Valet — FXUSDCAD',
+        url: 'https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1',
+        caveat:
+          'Daily reference rate from Bank of Canada. Not a transactional rate; banks and yards apply their own spreads. Display-only conversion.',
+      },
+      fetch_status: fxStatus,
+      manual_override: fxOverride !== null ? round(fxOverride, 4) : (existingFx.manual_override ?? null),
+    },
     fetch_status: {
       ...(data.fetch_status || {}),
       copper_reference: copperFetchStatus,
       bare_bright: bareBrightStatus,
       insulated_wire: insulatedStatus,
+      fx_usd_cad: fxStatus,
       notes: fetchSources
-        ? 'Live fetch attempted via Yahoo Finance HG=F. Scrap reference values are manual by design — see scripts/update-copper-data.mjs header for rationale.'
-        : 'Timestamps only. Set FETCH_SOURCES=1 to attempt live copper fetch. Scrap values stay manual.',
+        ? 'Live fetch attempted via Yahoo Finance HG=F and Bank of Canada Valet (FXUSDCAD). Scrap reference values are manual by design — see scripts/update-copper-data.mjs header for rationale.'
+        : 'Timestamps only. Set FETCH_SOURCES=1 to attempt live copper + FX fetch. Scrap values stay manual.',
     },
   };
 
@@ -390,6 +504,7 @@ async function main() {
   console.log('[update-copper-data] insulated:', insulated, '(', insulatedStatus, ')');
   console.log('[update-copper-data] strip delta:', stripDelta, '/lb');
   console.log('[update-copper-data] deltas: 30d', delta30, '12mo', delta12, '5yr', delta5);
+  console.log('[update-copper-data] fx USD→CAD:', fxRate, '(', fxStatus, ')', 'as of', fxAsOf);
 }
 
 main().catch((err) => {
