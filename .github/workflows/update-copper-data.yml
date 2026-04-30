@@ -1,0 +1,74 @@
+name: Update copper signal data
+
+# Refreshes data/copper-signal.json on a schedule. Conservative by default:
+# only timestamps move unless source fetchers are explicitly enabled or
+# manual overrides are supplied via workflow_dispatch inputs. No paid APIs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fetch_sources:
+        description: "Attempt to fetch live source values (Stooq, Rockaway). 'true' or 'false'."
+        required: false
+        default: "false"
+      copper_override:
+        description: "Manual override for copper reference price (USD/lb). Leave blank to skip."
+        required: false
+        default: ""
+      bare_bright_override:
+        description: "Manual override for bare bright reference (USD/lb). Leave blank to skip."
+        required: false
+        default: ""
+      insulated_override:
+        description: "Manual override for insulated wire reference (USD/lb). Leave blank to skip."
+        required: false
+        default: ""
+  schedule:
+    # Daily at 13:30 UTC ≈ 09:30 ET, after US copper futures open.
+    # Adjust freely; GitHub may delay scheduled runs under load.
+    - cron: "30 13 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-copper-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to immutable commit SHAs (with tag in comment) per GitHub's
+      # supply-chain hardening guidance. Update both the SHA and the
+      # comment when bumping. Last verified 2026-04-30:
+      #   actions/checkout    @ v4.3.1 → 34e114876b0b11c390a56381ad16ebd13914f8d5
+      #   actions/setup-node  @ v4.4.0 → 49933ea5288caeca8642d1e84afbd3f7d6820020
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+
+      - name: Run updater
+        env:
+          FETCH_SOURCES: ${{ github.event.inputs.fetch_sources == 'true' && '1' || '0' }}
+          COPPER_OVERRIDE: ${{ github.event.inputs.copper_override }}
+          BARE_BRIGHT_OVERRIDE: ${{ github.event.inputs.bare_bright_override }}
+          INSULATED_OVERRIDE: ${{ github.event.inputs.insulated_override }}
+        run: node scripts/update-copper-data.mjs
+
+      - name: Commit changes (if any)
+        run: |
+          set -euo pipefail
+          if [[ -n "$(git status --porcelain data/copper-signal.json)" ]]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/copper-signal.json
+            git commit -m "chore(data): refresh copper-signal.json [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi

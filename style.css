@@ -1,33 +1,60 @@
+/* StripMeister Copper Recovery Signal — internal prototype
+   Palette: charcoal + StripMeister red, with copper as the warm metal accent.
+   Blue is reserved exclusively for the primary CTA button. */
+
 :root,
 [data-theme='light'] {
-  --color-bg: #f6f6f4;
+  --color-bg: #f4f3ef;
   --color-surface: #ffffff;
-  --color-surface-2: #fbfbfa;
-  --color-surface-offset: #f0f0ee;
-  --color-border: #deded9;
-  --color-text: #111111;
-  --color-text-muted: #5f6b7a;
-  --color-text-faint: #7d8793;
-  --color-primary: #0071e3;
-  --color-primary-hover: #0077ed;
-  --color-button-dark: #111111;
-  --color-copper: #b45d20;
-  --color-copper-strong: #d97732;
-  --color-success: #3a9076;
+  --color-surface-2: #fafaf7;
+  --color-surface-offset: #ececea;
+  --color-border: #d9d6cf;
+
+  --color-text: #181715;
+  --color-text-muted: #4f4a44;
+  --color-text-faint: #8a847b;
+
+  /* StripMeister brand red (matches logo) */
+  --color-primary: #d6201f;
+  --color-primary-hover: #a8171a;
+
+  /* Charcoal — used for body type and dark surfaces */
+  --color-charcoal: #1a1a1a;
+  --color-charcoal-2: #262624;
+
+  /* Copper — warm metallic accent for dial, surface accents */
+  --color-copper: #b46a2c;
+  --color-copper-deep: #8a4a1a;
+  --color-copper-bright: #d98a3e;
+  --color-copper-light: #e8b182;
+
+  /* Blue — ONLY for primary CTA button */
+  --color-cta-blue: #0a66d8;
+  --color-cta-blue-hover: #084fae;
+
+  --color-success: #2f8260;
+  --color-success-tint: rgba(47, 130, 96, 0.14);
   --color-warning: #b8791b;
-  --color-risk: #da3f3f;
-  --shadow-lg: 0 18px 42px rgba(17, 17, 17, 0.08);
-  --shadow-md: 0 8px 24px rgba(17, 17, 17, 0.07);
-  --radius-sm: 0.375rem;
+  --color-risk: #c93636;
+
+  --shadow-lg: 0 22px 56px rgba(20, 14, 10, 0.10);
+  --shadow-md: 0 10px 28px rgba(20, 14, 10, 0.08);
+  --shadow-sm: 0 4px 14px rgba(20, 14, 10, 0.06);
+  --shadow-glow-green: 0 0 0 6px rgba(47, 130, 96, 0.18), 0 8px 24px rgba(47, 130, 96, 0.30);
+
+  --radius-sm: 0.4rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
-  --font-body: 'Satoshi', 'Inter', sans-serif;
-  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
-  --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
-  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
-  --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
-  --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  --radius-xl: 1.4rem;
+
+  --font-body: 'Satoshi', 'Inter', system-ui, sans-serif;
+
+  --text-xs: clamp(0.75rem, 0.7rem + 0.18vw, 0.83rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.3vw, 1rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.1rem);
+  --text-lg: clamp(1.15rem, 1rem + 0.7vw, 1.5rem);
+  --text-xl: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -36,35 +63,47 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-10: 2.5rem;
-  --space-12: 3rem;
 }
 
 [data-theme='dark'] {
-  --color-bg: #0f0f0f;
-  --color-surface: #171717;
-  --color-surface-2: #1f1f1f;
-  --color-surface-offset: #2a2a2a;
-  --color-border: #343434;
-  --color-text: #f6f6f4;
-  --color-text-muted: #a8a8a1;
-  --color-text-faint: #77776f;
-  --color-primary: #4da3ff;
-  --color-primary-hover: #73b8ff;
-  --color-button-dark: #f6f6f4;
-  --color-copper: #d97732;
-  --color-copper-strong: #ff9b45;
-  --color-success: #54b28d;
+  --color-bg: #0d0c0b;
+  --color-surface: #161513;
+  --color-surface-2: #1c1b18;
+  --color-surface-offset: #26241f;
+  --color-border: #322f2a;
+
+  --color-text: #f3f1ec;
+  --color-text-muted: #a59f95;
+  --color-text-faint: #6f6a61;
+
+  --color-primary: #ef3a37;        /* slightly brighter red on dark */
+  --color-primary-hover: #ff5a55;
+
+  --color-charcoal: #0d0c0b;
+  --color-charcoal-2: #161513;
+
+  --color-copper: #cf8748;
+  --color-copper-deep: #8b4f1c;
+  --color-copper-bright: #f0a869;
+  --color-copper-light: #ebc69a;
+
+  --color-cta-blue: #4f9bff;
+  --color-cta-blue-hover: #76b1ff;
+
+  --color-success: #4cb487;
+  --color-success-tint: rgba(76, 180, 135, 0.16);
   --color-warning: #d39a35;
   --color-risk: #e45c57;
-  --shadow-lg: 0 22px 60px rgba(0, 0, 0, 0.36);
-  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.26);
+
+  --shadow-lg: 0 26px 64px rgba(0, 0, 0, 0.50);
+  --shadow-md: 0 14px 32px rgba(0, 0, 0, 0.36);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.30);
+  --shadow-glow-green: 0 0 0 6px rgba(76, 180, 135, 0.22), 0 8px 24px rgba(76, 180, 135, 0.32);
 }
 
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
 html {
   min-height: 100%;
@@ -79,29 +118,48 @@ body {
   font-size: var(--text-base);
   line-height: 1.55;
   color: var(--color-text);
+  /* Charcoal base with restrained copper field accents — no blue in the field */
   background:
-    radial-gradient(circle at 14% 4%, color-mix(in srgb, var(--color-copper) 16%, transparent), transparent 28rem),
-    linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-bg) 94%, var(--color-copper) 6%));
+    radial-gradient(ellipse at 8% 0%, color-mix(in srgb, var(--color-copper) 20%, transparent), transparent 38rem),
+    radial-gradient(ellipse at 92% 4%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 32rem),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--color-copper-deep) 14%, transparent), transparent 40rem),
+    linear-gradient(170deg, var(--color-bg), color-mix(in srgb, var(--color-bg) 92%, var(--color-copper) 8%));
+  background-attachment: fixed;
 }
 
-a {
-  color: inherit;
-}
+a { color: inherit; }
 
 .skip-link {
+  /* Visually hidden until focused. Use the standard clip technique
+     (instead of transform alone) so it stays hidden in fullPage screenshots
+     and any context where transforms might be ignored. */
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
   z-index: 20;
-  transform: translateY(-140%);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-sm);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
   color: var(--color-bg);
   background: var(--color-text);
+  font-weight: 800;
 }
-
-.skip-link:focus {
-  transform: translateY(0);
+.skip-link:focus,
+.skip-link:focus-visible {
+  width: auto;
+  height: auto;
+  padding: var(--space-3) var(--space-4);
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .widget-shell {
@@ -110,221 +168,227 @@ a {
   padding: var(--space-6) 0;
 }
 
+/* Panels — subtle copper-tinted card surface on charcoal */
 .hero-panel,
 .decision-panel,
 .source-panel {
-  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 96%, var(--color-copper) 4%), var(--color-surface));
   box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(12px);
 }
 
 .hero-panel {
+  position: relative;
   border-radius: var(--radius-xl);
   padding: var(--space-6);
+  overflow: hidden;
 }
 
-.brand-row,
-.brand-lockup,
-.decision-layout,
-.method-panel,
-.weight-list div {
-  display: flex;
-  align-items: center;
+/* Subtle copper hairline at the top edge of the hero — metal cue */
+.hero-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-copper-deep) 12%,
+    var(--color-copper-bright) 50%,
+    var(--color-copper-deep) 88%,
+    transparent 100%
+  );
+  opacity: 0.7;
 }
 
 .brand-row {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
 }
 
 .brand-lockup {
-  gap: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
-.brand-mark {
-  width: 3.2rem;
-  min-width: 3.2rem;
+/* StripMeister wordmark — compact red typographic mark used as the page brand stamp.
+   This is a typographic treatment, not a replica of any official logo asset. */
+.brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem 0.3rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
   color: var(--color-primary);
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
-.brand-mark path {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.1;
+.brand-wordmark:hover,
+.brand-wordmark:focus-visible {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  outline: none;
 }
 
+.brand-jaw {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+}
+
+.brand-wordmark-text {
+  font-weight: 900;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  font-feature-settings: "ss01";
+}
+
+/* .eyebrow retained because it is still used inside the CTA card */
 .eyebrow,
 .metric-label {
   margin: 0 0 var(--space-1);
   color: var(--color-primary);
   font-size: var(--text-xs);
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
 }
 
-h1,
-h2,
-p {
-  margin-top: 0;
-}
+h1, h2, p { margin-top: 0; }
 
 h1 {
   margin-bottom: 0;
+  color: var(--color-text);
   font-size: var(--text-xl);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
 h2 {
   margin-bottom: var(--space-3);
+  color: var(--color-text);
   font-size: var(--text-lg);
-  line-height: 1.15;
-  letter-spacing: -0.025em;
-}
-
-p {
-  color: var(--color-text-muted);
-}
-
-.theme-toggle,
-.button {
-  min-height: 44px;
-  border-radius: 999px;
   font-weight: 800;
-  font-size: var(--text-sm);
-  text-decoration: none;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
+p { color: var(--color-text-muted); }
+
+/* Theme toggle */
 .theme-toggle {
+  min-height: 40px;
   border: 1px solid var(--color-border);
+  border-radius: 999px;
   padding: var(--space-2) var(--space-4);
   color: var(--color-text);
   background: var(--color-surface-2);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: var(--text-sm);
   cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
 }
-
-.theme-toggle:hover,
-.button:hover {
+.theme-toggle:hover {
   transform: translateY(-1px);
+  border-color: var(--color-primary);
 }
 
+/* === Hero signal grid === */
 .signal-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 0.72fr));
+  grid-template-columns: minmax(0, 1.7fr) repeat(2, minmax(0, 0.8fr));
   gap: var(--space-4);
-}
-
-.quick-cta {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-top: var(--space-4);
-  padding: var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--color-border) 66%, transparent);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-2);
-}
-
-.quick-cta span {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  font-weight: 700;
+  align-items: start; /* small cards size to content, no forced stretch to hero height */
 }
 
 .signal-card,
-.market-card,
-.stoplight-card,
-.timeline-card,
-.cta-card {
-  border: 1px solid color-mix(in srgb, var(--color-border) 66%, transparent);
+.market-card {
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
   border-radius: var(--radius-lg);
   background: var(--color-surface-2);
 }
 
 .signal-card {
-  min-height: 100%;
+  position: relative;
   padding: var(--space-6);
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--color-copper) 12%, transparent), transparent 60%),
+    var(--color-surface-2);
+  overflow: hidden;
 }
 
+/* Quieter market cards — clean and small, with positive coloring when positive */
 .market-card {
-  padding: var(--space-4);
-}
-
-.stoplight-card {
-  padding: var(--space-4);
-}
-
-.market-card.compact {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--color-surface-2);
 }
 
-.market-card strong,
-.stoplight-card strong {
+.market-card.compact strong {
   display: block;
-  margin-bottom: var(--space-2);
-  font-size: var(--text-xl);
+  margin-bottom: 0;
+  color: var(--color-text);
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+  font-weight: 900;
   line-height: 1;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-.stoplight {
-  display: inline-flex;
-  gap: var(--space-2);
-  margin: var(--space-2) 0 var(--space-4);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
+.market-card.compact strong .unit {
+  margin-left: 0.15rem;
+  color: var(--color-text-faint);
+  font-size: 0.55em;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
-.lamp {
-  width: 1.15rem;
-  height: 1.15rem;
-  border-radius: 999px;
-  background: var(--color-surface-offset);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent);
-}
-
-.lamp.red {
-  background: color-mix(in srgb, var(--color-risk) 18%, var(--color-surface-offset));
-}
-
-.lamp.amber {
-  background: color-mix(in srgb, var(--color-warning) 18%, var(--color-surface-offset));
-}
-
-.lamp.green {
-  background: color-mix(in srgb, var(--color-success) 18%, var(--color-surface-offset));
-}
-
-.lamp.active {
-  background: var(--color-success);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-success) 80%, #000 20%),
-    0 0 0 5px color-mix(in srgb, var(--color-success) 16%, transparent);
+.market-card.compact p {
+  margin-top: var(--space-1);
+  margin-bottom: 0;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--color-text-muted);
 }
 
 .metric-delta {
+  align-self: flex-start;
   display: inline-flex;
-  margin-bottom: var(--space-4);
+  align-items: center;
+  margin: 0;
   padding: var(--space-1) var(--space-3);
   border-radius: 999px;
   font-size: var(--text-xs);
   font-weight: 800;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .metric-delta.positive {
   color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  background: var(--color-success-tint);
+  border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+.metric-delta.negative {
+  /* Used when a price/change indicator drops below zero. Distinct from
+     StripMeister brand red so a falling-price chip never reads as a CTA. */
+  color: var(--color-risk);
+  background: color-mix(in srgb, var(--color-risk) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-risk) 30%, transparent);
 }
 
 .metric-delta.neutral {
@@ -332,116 +396,262 @@ p {
   background: color-mix(in srgb, var(--color-warning) 14%, transparent);
 }
 
-.score-block {
-  max-width: 24rem;
-  margin: var(--space-3) 0 var(--space-5);
-}
-
-.signal-score {
+/* Multi-horizon delta chips inside Today's copper reference tile */
+.delta-row {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-1);
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
 }
 
-.signal-score strong {
-  font-size: clamp(3rem, 7vw, 4.9rem);
-  line-height: 0.9;
-  letter-spacing: -0.07em;
+.delta-row .metric-delta {
+  /* Slightly tighter than a standalone chip so three fit comfortably */
+  padding: var(--space-1) 0.6rem;
+  font-size: var(--text-xs);
+  letter-spacing: -0.01em;
+}
+
+.delta-row .delta-unit {
+  margin-left: 0.15em;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+/* === Strip value delta KPI tile === */
+/* Override .market-card.compact strong (same specificity but later in cascade)
+   so the +$ figure reads in copper, distinct from the green +6.06% badge on the
+   sibling Today's copper reference card. */
+.market-card.compact strong.spread-delta {
+  color: var(--color-copper-bright);
+}
+
+.kpi-spread .spread-delta .sign {
+  /* Render the plus glyph at the same size/weight as the digits.
+     A smaller plus next to a tall '$' can read as '+-$' at low DPR. */
+  margin-right: 0.02em;
+  font-size: 1em;
+  font-weight: 900;
+  color: var(--color-copper-bright);
+  letter-spacing: 0;
+}
+
+.spread-rail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-copper) 5%, transparent);
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-.signal-score span {
-  color: var(--color-text-muted);
-  font-weight: 800;
-}
-
-.score-rail {
-  position: relative;
-  display: grid;
-  grid-template-columns: 45fr 25fr 30fr;
-  height: 0.9rem;
-  margin-top: var(--space-3);
-  overflow: visible;
-  border-radius: 999px;
-  background: var(--color-surface-offset);
-}
-
-.score-zone {
-  min-width: 0;
-}
-
-.red-zone {
-  border-radius: 999px 0 0 999px;
-  background: color-mix(in srgb, var(--color-risk) 34%, var(--color-surface-offset));
-}
-
-.amber-zone {
-  background: color-mix(in srgb, var(--color-warning) 42%, var(--color-surface-offset));
-}
-
-.green-zone {
-  border-radius: 0 999px 999px 0;
-  background: var(--color-success);
-}
-
-.score-marker {
-  position: absolute;
-  left: 82%;
-  top: 50%;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 3px solid var(--color-surface);
-  border-radius: 999px;
-  background: var(--color-text);
-  box-shadow: var(--shadow-md);
-  transform: translate(-50%, -50%);
-}
-
-.score-labels {
+.spread-end {
   display: flex;
-  justify-content: space-between;
-  margin-top: var(--space-2);
-  color: var(--color-text-muted);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  flex: 1 1 0;
+}
+
+.spread-end small {
   font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.spread-end b {
+  font-size: var(--text-sm);
   font-weight: 800;
+  color: var(--color-text);
 }
 
-.signal-action {
-  margin-top: var(--space-3);
+.spread-arrow {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 10px;
+  color: var(--color-copper);
 }
 
-.decision-panel,
-.method-panel,
-.source-panel {
+/* === Arched dial === */
+.dial-wrap {
+  position: relative;
+  max-width: 28rem;
+  margin: var(--space-3) auto var(--space-6);
+  padding-top: var(--space-2);
+  padding-bottom: 1.6rem; /* room for the stoplight light below the arc */
+}
+
+.dial-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dial-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-border) 70%, transparent);
+  stroke-width: 22;
+  stroke-linecap: round;
+}
+
+.dial-fill {
+  fill: none;
+  stroke: url(#copperArc);
+  stroke-width: 22;
+  stroke-linecap: round;
+  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--color-copper-deep) 35%, transparent));
+}
+
+.dial-ticks line {
+  stroke: var(--color-text-faint);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.dial-needle line {
+  stroke: var(--color-text);
+  stroke-width: 4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+}
+
+.dial-hub {
+  fill: var(--color-charcoal);
+  stroke: var(--color-copper-bright);
+  stroke-width: 2.5;
+}
+
+[data-theme='light'] .dial-hub {
+  fill: var(--color-text);
+  stroke: var(--color-copper-bright);
+}
+
+/* Stoplight readout integrated below the arc — the only readout in the dial */
+.dial-readout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Integrated stoplight: a single illuminated green light + label + small score, centered below the arc */
+.buy-light {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.9rem 0.55rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-success) 16%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-success) 45%, transparent);
+  color: var(--color-text);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  pointer-events: auto;
+}
+
+.buy-light-score {
+  display: inline-flex;
+  align-items: baseline;
+  padding-left: 0.6rem;
+  margin-left: 0.1rem;
+  border-left: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.02em;
+}
+
+.buy-light-score small {
+  margin-left: 0.1rem;
+  color: var(--color-text-faint);
+  font-size: 0.7em;
+  font-weight: 700;
+}
+
+.buy-light-dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--color-success) 40%, #fff) 0%,
+    var(--color-success) 55%,
+    color-mix(in srgb, var(--color-success) 60%, #000) 100%
+  );
+  box-shadow: var(--shadow-glow-green);
+  flex-shrink: 0;
+}
+
+.buy-light-text {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* === Decision panel === */
+.decision-panel {
   margin-top: var(--space-4);
   border-radius: var(--radius-xl);
   padding: var(--space-6);
 }
 
 .panel-heading {
-  max-width: 46rem;
+  max-width: 52rem;
   margin-bottom: var(--space-5);
 }
 
-.decision-layout {
-  display: block;
+.panel-lede {
+  margin-top: 0;
+  margin-bottom: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
+  line-height: 1.5;
 }
 
 .timeline-card {
   position: relative;
-  flex: 1 1 auto;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-lg);
   padding: var(--space-6);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-copper) 4%, var(--color-surface-2)), var(--color-surface-2));
   overflow: hidden;
 }
 
+.timeline-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1.5rem;
+  bottom: 1.5rem;
+  width: 3px;
+  background: linear-gradient(180deg, var(--color-primary), var(--color-copper));
+  border-radius: 999px;
+}
+
 .signal-factors {
-  position: relative;
-  z-index: 1;
   display: grid;
   gap: var(--space-4);
-  max-width: 43rem;
+  max-width: 50rem;
   margin: 0;
-  padding-left: var(--space-6);
+  padding-left: var(--space-5);
+  list-style: decimal;
+}
+
+.signal-factors li {
+  color: var(--color-text-muted);
 }
 
 .signal-factors li::marker {
@@ -450,79 +660,146 @@ p {
 }
 
 .signal-factors strong {
+  display: block;
+  margin-bottom: 0.15rem;
   color: var(--color-text);
+  font-weight: 800;
 }
 
+/* === CTA card — single grouped area === */
 .cta-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-5);
-  margin-top: var(--space-4);
+  gap: var(--space-6);
+  margin-top: var(--space-5);
   padding: var(--space-6);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  border-radius: var(--radius-lg);
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 16%, var(--color-surface-2)), var(--color-surface-2));
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--color-primary) 10%, var(--color-charcoal)) 0%,
+      color-mix(in srgb, var(--color-copper-deep) 18%, var(--color-charcoal)) 100%);
+  color: #f6f4ef;
+  box-shadow: var(--shadow-md);
 }
 
-.cta-card > div:first-child {
-  max-width: 29rem;
-}
+.cta-card .eyebrow { color: var(--color-copper-light); }
+.cta-card h2 { color: #ffffff; }
+.cta-card p { color: rgba(246, 244, 239, 0.78); }
+
+.cta-copy { max-width: 30rem; }
 
 .cta-stack {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-2);
   justify-content: flex-end;
-  margin-top: 0;
+  align-items: center;
 }
 
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-5);
+  min-height: 42px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
   transition:
     transform 180ms ease,
     background 180ms ease,
-    border-color 180ms ease;
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
+.button:hover { transform: translateY(-1px); }
+
+/* Primary CTA — the only place blue appears, the loudest action */
 .button.primary {
-  color: #1b0d04;
-  background: var(--color-primary);
+  color: #ffffff;
+  background: var(--color-cta-blue);
+  border: 1px solid color-mix(in srgb, var(--color-cta-blue) 60%, #000);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-cta-blue) 35%, transparent);
+  padding: var(--space-3) var(--space-5);
+}
+.button.primary:hover {
+  background: var(--color-cta-blue-hover);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-cta-blue) 45%, transparent);
 }
 
+/* Secondary CTA — charcoal-filled chip on the dark CTA card */
 .button.secondary {
-  border: 1px solid var(--color-primary);
-  color: var(--color-primary);
-  background: transparent;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+}
+.button.secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.55);
 }
 
+/* Tertiary CTA — subtle ghost link, lowest-weight of the three */
 .button.tertiary {
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  color: rgba(246, 244, 239, 0.85);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.button.tertiary:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.36);
 }
 
+/* === Source / methodology — compact accordion === */
 .source-panel {
-  box-shadow: var(--shadow-md);
-  padding: var(--space-4);
+  margin-top: var(--space-4);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
 }
 
-.source-panel p {
-  max-width: 100%;
+.source-panel details {
   font-size: var(--text-sm);
 }
 
-.source-panel a {
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
-details summary {
+.source-panel summary {
   cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.source-panel summary::-webkit-details-marker { display: none; }
+
+.source-panel summary::after {
+  content: '+';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 900;
+  transition: transform 180ms ease;
+}
+
+.source-panel details[open] summary::after {
+  content: '–';
+  transform: rotate(0deg);
 }
 
 .method-content {
@@ -531,26 +808,231 @@ details summary {
   border-top: 1px solid var(--color-border);
 }
 
+.method-content p {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.source-panel a {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.source-panel a:hover { color: var(--color-primary-hover); }
+
 .disclaimer {
+  margin-top: var(--space-3);
   margin-bottom: 0;
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  font-style: italic;
+}
+
+/* === Methodology accordion: matrix table, calc block, source list === */
+.method-heading {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.method-heading:first-of-type { margin-top: var(--space-2); }
+
+.method-lede {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.method-table-wrap {
+  /* Allow horizontal overflow on narrow viewports without breaking layout */
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  -webkit-overflow-scrolling: touch;
+}
+.method-table-wrap:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.method-table {
+  width: 100%;
+  min-width: 560px; /* keeps four columns scannable; container scrolls if narrower */
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.method-table thead th {
+  position: sticky;
+  top: 0;
+  padding: var(--space-3) var(--space-3);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-2));
+  color: var(--color-text);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.method-table tbody th[scope="row"] {
+  padding: var(--space-3);
+  text-align: left;
+  font-weight: 800;
+  color: var(--color-text);
+  white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  vertical-align: top;
+}
+
+.method-table tbody td {
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.method-table tbody tr:last-child th,
+.method-table tbody tr:last-child td { border-bottom: 0; }
+
+.method-table tbody tr:nth-child(even) td,
+.method-table tbody tr:nth-child(even) th[scope="row"] {
+  background: color-mix(in srgb, var(--color-surface-offset) 35%, transparent);
+}
+
+.method-table td.num {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 800;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.method-table td.num.pos { color: var(--color-success); }
+.method-table td.num.neg { color: var(--color-risk); }
+
+/* Source links inside table cells stay inline-friendly */
+.method-table a { font-weight: 600; }
+
+/* Stacked-arithmetic calculation block */
+.calc-block {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-copper);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-copper) 5%, var(--color-surface-2));
+}
+
+.calc-stack {
+  margin: 0;
+  padding: 0;
+  font-family: 'Satoshi', 'Inter', system-ui, sans-serif;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.calc-row {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: 0.25rem 0;
+}
+
+.calc-op {
+  font-weight: 800;
+  color: var(--color-text-faint);
+  text-align: center;
+}
+
+.calc-label {
+  color: var(--color-text-muted);
+}
+
+.calc-val {
+  color: var(--color-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.calc-row.calc-rule {
+  margin-top: 0.1rem;
+  padding-top: 0.45rem;
+  border-top: 1.5px solid var(--color-text);
+}
+.calc-row.calc-rule .calc-op,
+.calc-row.calc-rule .calc-label,
+.calc-row.calc-rule .calc-val {
+  color: var(--color-text);
+}
+.calc-row.calc-rule .calc-val strong { color: var(--color-copper-bright); }
+
+.calc-row.calc-extension {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 90%, transparent);
+  color: var(--color-text-muted);
+}
+.calc-row.calc-extension .calc-val { color: var(--color-copper-bright); font-weight: 800; }
+
+.calc-block figcaption {
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+/* Source list — compact bulleted column */
+.source-list {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-1) var(--space-5);
+  list-style: disc outside;
+  color: var(--color-text-muted);
+}
+.source-list li {
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  break-inside: avoid;
 }
 
 :focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 3px;
+  border-radius: 4px;
 }
 
+/* === Responsive === */
 @media (max-width: 980px) {
-  .signal-grid,
-  .cta-card,
-  .method-panel {
-    display: grid;
-    grid-template-columns: 1fr;
+  .signal-grid {
+    grid-template-columns: 1fr 1fr;
   }
+  .signal-card { grid-column: 1 / -1; }
 
+  .cta-card {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
   .cta-stack {
     justify-content: stretch;
+    gap: var(--space-2);
   }
+  .cta-stack .button { flex: 1 1 auto; }
 }
 
 @media (max-width: 620px) {
@@ -566,29 +1048,33 @@ details summary {
     border-radius: var(--radius-lg);
   }
 
+  .signal-grid {
+    grid-template-columns: 1fr;
+  }
+
   .brand-row {
     align-items: flex-start;
     flex-direction: column;
   }
+  .theme-toggle { width: 100%; }
 
-  .theme-toggle {
-    width: 100%;
-  }
+  .dial-readout { gap: var(--space-1); }
+  .signal-score strong { font-size: 2.6rem; }
 
-  .quick-cta {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
+  /* Methodology table stays scrollable; tighten column widths a touch on phones */
+  .method-table { min-width: 520px; font-size: 0.85rem; }
+  .method-table thead th,
+  .method-table tbody th[scope="row"],
+  .method-table tbody td { padding: 0.6rem 0.7rem; }
 
-  .quick-cta span {
-    text-align: center;
-  }
+  .calc-block { padding: var(--space-3) var(--space-4); }
+  .calc-row { grid-template-columns: 1.1rem 1fr auto; gap: var(--space-2); }
+
+  .source-list { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;

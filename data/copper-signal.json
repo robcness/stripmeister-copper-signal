@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-04-30T20:16:00Z",
+  "last_updated": "2026-04-30",
+  "last_checked": "2026-04-30T20:16:00Z",
+  "copper": {
+    "reference_price_usd_per_lb": 5.98,
+    "as_of_date": "2026-04-30",
+    "delta_30d_pct": 6.06,
+    "delta_12mo_pct": 29.7,
+    "delta_5yr_pct": 33.8,
+    "history": {
+      "close_2021_04_30": 4.468,
+      "close_2025_04_30": 4.609,
+      "close_2026_04_30": 5.976
+    },
+    "deltas_status": {
+      "30d": "positive",
+      "12mo": "positive",
+      "5yr": "positive"
+    }
+  },
+  "scrap": {
+    "bare_bright_usd_per_lb": 5.05,
+    "insulated_wire_usd_per_lb": 1.75,
+    "strip_value_delta_usd_per_lb": 3.30,
+    "strip_value_delta_status": "positive",
+    "spread_per_50lb_usd": 165,
+    "spread_unit_lbs": 50
+  },
+  "signal": {
+    "score": 82,
+    "score_max": 100,
+    "label": "Good time to buy",
+    "headline": "Strong recovery window",
+    "summary": "Copper is near a five-year high and still climbing. If you have wire on hand, run the recovery math now.",
+    "weights": {
+      "price_momentum": 0.35,
+      "five_year_context": 0.25,
+      "recycling_demand_relevance": 0.20,
+      "short_term_risk": 0.20
+    }
+  },
+  "sources": {
+    "copper_reference": {
+      "label": "Trading Economics",
+      "url": "https://tradingeconomics.com/commodity/copper",
+      "caveat": "Retail yard prices vary regionally."
+    },
+    "delta_30d": {
+      "label": "Trading Economics",
+      "url": "https://tradingeconomics.com/commodity/copper",
+      "caveat": "Short-term momentum signal only."
+    },
+    "delta_12mo": {
+      "label": "J.P. Morgan outlook",
+      "url": "https://www.jpmorgan.com/insights/global-research/commodities/copper-outlook",
+      "caveat": "Outlook context only, not a forecast."
+    },
+    "delta_5yr": {
+      "label": "NRCan copper facts",
+      "url": "https://natural-resources.canada.ca/minerals-mining/mining-data-statistics-analysis/minerals-metals-facts/copper-facts",
+      "caveat": "Long-horizon context."
+    },
+    "strip_value_delta": {
+      "label": "Rockaway / iScrap / ScrapMonster",
+      "urls": [
+        {"label": "Rockaway", "url": "https://rockawayrecycling.com/metal/1-bare-bright-wire/"},
+        {"label": "iScrap", "url": "https://iscrapapp.com/metals/bare-bright-copper/"},
+        {"label": "ScrapMonster", "url": "https://www.scrapmonster.com/scrap-prices/category/Copper-Scrap/128/1/1"}
+      ],
+      "caveat": "Reference rates only."
+    },
+    "score": {
+      "label": "ICA recycling brief",
+      "url": "https://internationalcopper.org/wp-content/uploads/2022/02/ICA-RecyclingBrief-202201-A4-R2.pdf",
+      "caveat": "Prototype scoring, not a trade signal."
+    },
+    "candidates": [
+      {
+        "id": "stooq_hgf",
+        "label": "Stooq HG.F (free, no key)",
+        "url": "https://stooq.com/q/?s=hg.f"
+      },
+      {
+        "id": "rockaway_bare_bright",
+        "label": "Rockaway Recycling — #1 Bare Bright Wire",
+        "url": "https://rockawayrecycling.com/metal/1-bare-bright-wire/"
+      },
+      {
+        "id": "rockaway_insulated",
+        "label": "Rockaway Recycling — Insulated Copper Wire",
+        "url": "https://rockawayrecycling.com/metal/insulated-copper-wire/"
+      },
+      {
+        "id": "iscrap_bare_bright",
+        "label": "iScrap App — Bare Bright",
+        "url": "https://iscrapapp.com/metals/bare-bright-copper/"
+      },
+      {
+        "id": "scrapmonster_copper",
+        "label": "ScrapMonster — Copper Scrap",
+        "url": "https://www.scrapmonster.com/scrap-prices/category/Copper-Scrap/128/1/1"
+      }
+    ]
+  },
+  "fetch_status": {
+    "copper_reference": "manual",
+    "bare_bright": "manual",
+    "insulated_wire": "manual",
+    "notes": "Values populated manually. Update via scripts/update-copper-data.mjs once source parsers are wired."
+  }
+}

@@ -3,10 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Copper Recovery Signal | StripMeister Internal Prototype</title>
+    <!--
+      Content Security Policy.
+
+      - style-src: 'self' for ./style.css and api.fontshare.com for the
+        Satoshi font CSS.
+      - font-src: cdn.fontshare.com — Fontshare's CSS references woff2/woff/ttf
+        files served from this CDN; api.fontshare.com is just the CSS host.
+      - script-src 'self' covers ./app.js with no inline scripts.
+      - connect-src 'self' covers ./data/copper-signal.json.
+      - frame-ancestors is intentionally omitted: it is ignored when delivered
+        via <meta>. If this widget is ever served from a real host, set
+        `Content-Security-Policy: frame-ancestors 'none'` (and an
+        `X-Frame-Options: DENY` companion) at the HTTP response-header layer.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://api.fontshare.com; font-src https://cdn.fontshare.com; connect-src 'self'; img-src 'self' data:; script-src 'self'; base-uri 'self'; form-action 'self';" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>Copper Recovery Signal</title>
     <meta
       name="description"
-      content="A private first-iteration StripMeister copper recovery signal widget for copper recyclers, scrappers, electricians, and contractors."
+      content="A private StripMeister copper recovery signal widget for copper recyclers, scrappers, electricians, and contractors."
     />
     <link rel="preconnect" href="https://api.fontshare.com" />
     <link
@@ -20,16 +37,17 @@
     <main id="main" class="widget-shell" aria-labelledby="widget-title">
       <section class="hero-panel" aria-describedby="signal-summary">
         <div class="brand-row">
-          <div class="brand-lockup" aria-label="StripMeister Copper Recovery Signal">
-            <svg class="brand-mark" viewBox="0 0 44 44" aria-hidden="true">
-              <path d="M22 4 38 13.5v17L22 40 6 30.5v-17L22 4Z" />
-              <path d="M15.5 15.5h13c2.7 0 4.8 2.1 4.8 4.8s-2.1 4.8-4.8 4.8h-13" />
-              <path d="M28.5 28.5h-13c-2.7 0-4.8-2.1-4.8-4.8s2.1-4.8 4.8-4.8h13" />
-            </svg>
-            <div>
-              <p class="eyebrow">StripMeister internal prototype</p>
-              <h1 id="widget-title">Copper Recovery Signal</h1>
-            </div>
+          <div class="brand-lockup">
+            <a class="brand-wordmark" href="https://www.stripmeister.com" target="_blank" rel="noopener noreferrer" aria-label="StripMeister">
+              <svg class="brand-jaw" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+                <!-- Compact bracket-jaw glyph: a stylized wire-stripper bite,
+                     not a full logo replica. Pure CSS color via currentColor. -->
+                <path d="M3 3h6v2.6H5.6v6.8H9V15H3V3Z" fill="currentColor" />
+                <path d="M15 3h-6v2.6h3.4v6.8H9V15h6V3Z" fill="currentColor" opacity="0.55" />
+              </svg>
+              <span class="brand-wordmark-text">STRIPMEISTER</span>
+            </a>
+            <h1 id="widget-title">Copper Recovery Signal</h1>
           </div>
           <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme">
             <span data-theme-icon>Theme</span>
@@ -39,113 +57,128 @@
         <div class="signal-grid">
           <article class="signal-card primary-signal" aria-labelledby="signal-label">
             <p id="signal-label" class="metric-label">Today’s buying signal</p>
-            <div class="score-block" aria-label="Strong recovery window: 82 out of 100">
-              <div class="signal-score">
-                <strong>82</strong>
-                <span>/100</span>
-              </div>
-              <div class="score-rail" role="img" aria-label="Score zones: red below 45, amber from 45 to 70, green above 70. Current score is 82.">
-                <span class="score-zone red-zone"></span>
-                <span class="score-zone amber-zone"></span>
-                <span class="score-zone green-zone"></span>
-                <span class="score-marker" aria-hidden="true"></span>
-              </div>
-              <div class="score-labels" aria-hidden="true">
-                <span>Wait</span>
-                <span>Watch</span>
-                <span>Buy</span>
-              </div>
-            </div>
-            <h2>Strong recovery window</h2>
-            <p id="signal-summary">
-              Copper is near the high end of its five-year range while one-year momentum remains elevated.
-              If you already have insulated copper wire to process, this is a favorable moment to calculate
-              recovery value and choose the machine that fits your volume.
-            </p>
-            <a
-              class="button primary signal-action"
-              href="https://www.stripmeister.com/pages/scrap-calculator"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-signal-calculator"
-            >
-              Calculate your wire recovery
-            </a>
-          </article>
 
-          <article class="stoplight-card" aria-labelledby="stoplight-label">
-            <p id="stoplight-label" class="metric-label">Stoplight readout</p>
-            <div class="stoplight" role="img" aria-label="Green signal: favorable time to buy">
-              <span class="lamp red" aria-hidden="true"></span>
-              <span class="lamp amber" aria-hidden="true"></span>
-              <span class="lamp green active" aria-hidden="true"></span>
+            <div class="dial-wrap" aria-label="Strong recovery window: 82 out of 100. Green light: good time to buy." data-field="dial-wrap">
+              <svg class="dial-svg" viewBox="0 0 320 200" role="img" aria-labelledby="dial-title dial-desc">
+                <title id="dial-title">Copper recovery buying signal — arched dial</title>
+                <desc id="dial-desc" data-field="dial-desc">A semicircular dial showing the score 82 out of 100, sitting in the green buy zone.</desc>
+                <defs>
+                  <linearGradient id="copperArc" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0" stop-color="var(--color-copper-deep)" />
+                    <stop offset="0.55" stop-color="var(--color-copper)" />
+                    <stop offset="1" stop-color="var(--color-copper-bright)" />
+                  </linearGradient>
+                  <linearGradient id="trackArc" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0" stop-color="var(--color-surface-offset)" />
+                    <stop offset="1" stop-color="var(--color-surface-2)" />
+                  </linearGradient>
+                </defs>
+                <!-- background track -->
+                <path class="dial-track" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" />
+                <!-- copper-toned graduated arc representing scoring band -->
+                <path class="dial-fill" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" />
+                <!-- tick marks -->
+                <g class="dial-ticks" aria-hidden="true">
+                  <line x1="40" y1="170" x2="48" y2="166" />
+                  <line x1="64" y1="118" x2="72" y2="120" />
+                  <line x1="106" y1="80" x2="110" y2="88" />
+                  <line x1="160" y1="68" x2="160" y2="78" />
+                  <line x1="214" y1="80" x2="210" y2="88" />
+                  <line x1="256" y1="118" x2="248" y2="120" />
+                  <line x1="280" y1="170" x2="272" y2="166" />
+                </g>
+                <!-- needle for score 82/100 -->
+                <g class="dial-needle">
+                  <line x1="160" y1="170" x2="251" y2="113" />
+                  <circle cx="160" cy="170" r="9" class="dial-hub" />
+                </g>
+              </svg>
+
+              <div class="dial-readout">
+                <div class="buy-light" role="status" aria-label="Green light: good time to buy. Score 82 of 100." data-field="buy-light">
+                  <span class="buy-light-dot" aria-hidden="true"></span>
+                  <span class="buy-light-text" data-field="signal-label">Good time to buy</span>
+                  <span class="buy-light-score" aria-hidden="true"><span data-field="signal-score">82</span><small>/<span data-field="signal-score-max">100</span></small></span>
+                </div>
+              </div>
             </div>
-            <strong>Green</strong>
-            <span class="metric-delta positive">Good time to buy</span>
-            <p>82/100 means buy timing is favorable if you already have wire to process.</p>
+
+            <h2 data-field="signal-headline">Strong recovery window</h2>
+            <p id="signal-summary" data-field="signal-summary">
+              Copper is near a five-year high and still climbing. If you have wire on hand, run the
+              recovery math now.
+            </p>
           </article>
 
           <article class="market-card compact" aria-labelledby="market-label">
-            <p id="market-label" class="metric-label">Copper reference</p>
-            <strong>$5.98/lb</strong>
-            <span class="metric-delta positive">+6.06% in 30 days</span>
-            <p>Momentum supports urgency; daily swings still matter.</p>
+            <p id="market-label" class="metric-label">Today's copper reference</p>
+            <strong>$<span data-field="copper-price">5.98</span><span class="unit">/lb</span></strong>
+            <div class="delta-row" role="group" aria-label="Copper price change over 30 days, 12 months, and 5 years">
+              <span class="metric-delta positive" title="30-day change" data-field="delta-30d-chip"><span data-field="delta-30d">+6.06%</span> <span class="delta-unit">· 30d</span></span>
+              <span class="metric-delta positive" title="12-month rolling change" data-field="delta-12mo-chip"><span data-field="delta-12mo">+29.7%</span> <span class="delta-unit">· 12mo</span></span>
+              <span class="metric-delta positive" title="5-year change, 2021 to 2026" data-field="delta-5yr-chip"><span data-field="delta-5yr">+33.8%</span> <span class="delta-unit">· 5yr</span></span>
+            </div>
+            <p>Momentum supports urgency across short and long horizons; daily swings still matter.</p>
           </article>
 
-          <article class="market-card compact" aria-labelledby="five-year-label">
-            <p id="five-year-label" class="metric-label">Value context</p>
-            <strong>+33.8%</strong>
-            <span class="metric-delta positive">2021 to 2026</span>
-            <p>Higher pricing strengthens the case for cleaner recovered metal.</p>
+          <article class="market-card compact kpi-spread" aria-labelledby="spread-label">
+            <p id="spread-label" class="metric-label">Strip value delta</p>
+            <strong class="spread-delta" data-field="strip-delta-wrap"><span class="sign" aria-hidden="true" data-field="strip-delta-sign">+</span>$<span data-field="strip-delta-abs">3.30</span><span class="unit">/lb</span></strong>
+            <div class="spread-rail" aria-label="Insulated copper wire $1.75 per pound versus bare bright copper $5.05 per pound" data-field="spread-rail">
+              <span class="spread-end">
+                <small>Insulated</small>
+                <b>$<span data-field="insulated-price">1.75</span></b>
+              </span>
+              <svg class="spread-arrow" viewBox="0 0 32 12" aria-hidden="true">
+                <path d="M0 6h28M22 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class="spread-end">
+                <small>Bare bright</small>
+                <b>$<span data-field="bare-bright-price">5.05</span></b>
+              </span>
+            </div>
+            <p>Reference spread only; check your local yard. Every <span data-field="spread-unit-lbs">50</span> lb recovered ≈ $<span data-field="spread-per-50lb">165</span> in raw material spread.</p>
           </article>
-        </div>
-        <div class="quick-cta" aria-label="Primary quick action">
-          <a
-            class="button primary"
-            href="https://www.stripmeister.com/pages/scrap-calculator"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="link-quick-calculator"
-          >
-            Calculate your wire recovery
-          </a>
-          <span>Then compare models before you buy.</span>
         </div>
       </section>
 
-      <section class="decision-panel" aria-labelledby="decision-title">
+      <section class="decision-panel" aria-label="Plain-language interpretation">
         <div class="panel-heading">
-          <p class="eyebrow">Plain-language interpretation</p>
-          <h2 id="decision-title">What the signal means for a copper wire recycler</h2>
+          <p class="panel-lede">
+            A common-sense read of where copper is right now — and what it changes about your next move.
+            Not a forecast or financial advice; a market-aware nudge to run the numbers on the wire you
+            already control.
+          </p>
         </div>
         <div class="decision-layout">
           <div class="timeline-card">
             <ol class="signal-factors">
               <li>
-                <strong>Green means “act, but verify.”</strong>
-                The signal does not guarantee scrap-yard pricing, but it does say the market is favorable enough
-                to run the recovery math now.
+                <strong>Verify today’s local price.</strong>
+                Reference rates on this widget reflect public market data. Confirm the day’s buy price with
+                your local scrap yard before committing volume — copper pricing is regional and moves daily.
               </li>
               <li>
-                <strong>Recovery relevance is built in.</strong>
-                Recycled copper already represents a meaningful share of global copper consumption, so cleaner
-                recovered wire is not a side story; it is part of the copper supply chain.
+                <strong>Sort by recoverable copper content.</strong>
+                Separate insulated wire from clean #1 bare bright. Cleanly stripped copper trades at the top-paid
+                grade; jacketed wire trades lower. Sorting before stripping is what makes the spread real.
               </li>
               <li>
-                <strong>Volume decides urgency.</strong>
-                The best buyer is someone with copper wire on hand, predictable future wire volume, or paid labor
-                time being lost to slow manual stripping.
+                <strong>Match machine size to volume.</strong>
+                Estimate weekly recoverable pounds and pair that against current manual labor hours. The right
+                stripper is the one that clears your inbound pipeline without idle capacity or backlog.
               </li>
             </ol>
           </div>
-
         </div>
+
         <aside class="cta-card" aria-labelledby="cta-title">
-          <div>
+          <div class="cta-copy">
             <p class="eyebrow">Recommended next step</p>
             <h2 id="cta-title">Turn wire into a recovery plan</h2>
             <p>
-              Estimate recoverable value, then choose the machine that matches your wire size, workspace, and volume.
+              Estimate recoverable value, then choose the StripMeister model that matches your wire size,
+              workspace, and volume.
             </p>
           </div>
           <div class="cta-stack" aria-label="StripMeister action links">
@@ -156,7 +189,7 @@
               rel="noopener noreferrer"
               data-testid="link-scrap-calculator"
             >
-              Calculate your wire recovery
+              Calculate your recovery
             </a>
             <a
               class="button secondary"
@@ -165,7 +198,7 @@
               rel="noopener noreferrer"
               data-testid="link-compare-machines"
             >
-              Compare StripMeister models
+              Compare models
             </a>
             <a
               class="button tertiary"
@@ -174,7 +207,7 @@
               rel="noopener noreferrer"
               data-testid="link-model-finder"
             >
-              Find your StripMeister model
+              Find your model
             </a>
           </div>
         </aside>
@@ -182,24 +215,95 @@
 
       <footer class="source-panel">
         <details>
-          <summary>Method, weighting, and sources</summary>
+          <summary>Method, weighting &amp; sources</summary>
           <div class="method-content">
-            <p>
-              Prototype score weighting: price momentum 35%, five-year value context 25%, recycling demand relevance
-              20%, and short-term risk adjustment 20%. A weaker copper tape would lower the urgency label, but the CTA
-              remains constructive: estimate recovery, compare machines, and buy the model that fits actual volume.
+            <h3 class="method-heading">Metrics matrix</h3>
+            <p class="method-lede">
+              Each value visible on the dashboard, with how it is calculated and where the underlying reference
+              comes from.
             </p>
+            <div class="method-table-wrap" role="region" aria-label="Metrics, calculation methods, and sources" tabindex="0">
+              <table class="method-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Metric</th>
+                    <th scope="col">Value</th>
+                    <th scope="col">Calculation / method</th>
+                    <th scope="col">Source &amp; caveat</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Copper reference</th>
+                    <td class="num" data-field="method-copper-price">$5.98/lb</td>
+                    <td>Reference spot rate from public copper futures (HG=F monthly close, 2026-04-30).</td>
+                    <td><a href="https://tradingeconomics.com/commodity/copper" target="_blank" rel="noopener noreferrer">Trading Economics</a> · retail yard prices vary regionally.</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">30-day change</th>
+                    <td class="num pos" data-field="method-delta-30d">+6.06%</td>
+                    <td>(Latest close − close 30 days prior) ÷ close 30 days prior.</td>
+                    <td><a href="https://tradingeconomics.com/commodity/copper" target="_blank" rel="noopener noreferrer">Trading Economics</a> · short-term momentum signal only.</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">12-month rolling change</th>
+                    <td class="num pos" data-field="method-delta-12mo">+29.7%</td>
+                    <td data-field="method-delta-12mo-calc">(5.976 − 4.609) ÷ 4.609. Close 2025-04-30 $4.609 → close 2026-04-30 $5.976.</td>
+                    <td><a href="https://www.jpmorgan.com/insights/global-research/commodities/copper-outlook" target="_blank" rel="noopener noreferrer">J.P. Morgan outlook</a> · outlook context only, not a forecast.</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">5-year change</th>
+                    <td class="num pos" data-field="method-delta-5yr">+33.8%</td>
+                    <td data-field="method-delta-5yr-calc">(5.976 − 4.468) ÷ 4.468. Close 2021-04-30 $4.468 → close 2026-04-30 $5.976.</td>
+                    <td><a href="https://natural-resources.canada.ca/minerals-mining/mining-data-statistics-analysis/minerals-metals-facts/copper-facts" target="_blank" rel="noopener noreferrer">NRCan copper facts</a> · long-horizon context.</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Strip value delta</th>
+                    <td class="num pos" data-field="method-strip-delta">+$3.30/lb</td>
+                    <td>Bare bright reference − insulated reference. See stacked arithmetic below.</td>
+                    <td><a href="https://rockawayrecycling.com/metal/1-bare-bright-wire/" target="_blank" rel="noopener noreferrer">Rockaway</a>, <a href="https://iscrapapp.com/metals/bare-bright-copper/" target="_blank" rel="noopener noreferrer">iScrap</a>, <a href="https://www.scrapmonster.com/scrap-prices/category/Copper-Scrap/128/1/1" target="_blank" rel="noopener noreferrer">ScrapMonster</a> · reference rates only.</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Buying signal score</th>
+                    <td class="num" data-field="method-signal-score">82 / 100</td>
+                    <td>Weighted blend: price momentum 35% · 5-yr context 25% · recycling demand relevance 20% · short-term risk 20%.</td>
+                    <td><a href="https://internationalcopper.org/wp-content/uploads/2022/02/ICA-RecyclingBrief-202201-A4-R2.pdf" target="_blank" rel="noopener noreferrer">ICA recycling brief</a> · prototype scoring, not a trade signal.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 class="method-heading">Strip value delta</h3>
             <p>
-              Sources: <a href="https://tradingeconomics.com/commodity/copper" target="_blank" rel="noopener noreferrer">Trading Economics copper market reference</a>,
-              <a href="https://www.jpmorgan.com/insights/global-research/commodities/copper-outlook" target="_blank" rel="noopener noreferrer">J.P. Morgan copper outlook</a>,
-              <a href="https://natural-resources.canada.ca/minerals-mining/mining-data-statistics-analysis/minerals-metals-facts/copper-facts" target="_blank" rel="noopener noreferrer">Natural Resources Canada copper facts</a>,
-              <a href="https://internationalcopper.org/wp-content/uploads/2022/02/ICA-RecyclingBrief-202201-A4-R2.pdf" target="_blank" rel="noopener noreferrer">International Copper Association recycling brief</a>,
-              <a href="https://www.stripmeister.com/pages/scrap-calculator" target="_blank" rel="noopener noreferrer">StripMeister scrap calculator</a>,
-              and <a href="https://www.stripmeister.com/pages/compare-machines" target="_blank" rel="noopener noreferrer">StripMeister compare machines</a>.
+              Recycling-community terminology distinguishes <em>insulated copper wire</em> (jacketed, lower-yield)
+              from <em>#1 bare bright copper</em> (clean, uncoated, unalloyed wire thicker than 16 gauge — the
+              top-paid recovery grade). This widget treats the difference between the two as a reference
+              raw-material spread, not a guaranteed yard price. Local scrap yards quote daily and apply their
+              own grading; confirm with the buyer before committing volume.
             </p>
+
+            <figure class="calc-block" aria-label="Strip value delta calculation">
+              <pre class="calc-stack"><span class="calc-row"><span class="calc-op" aria-hidden="true"> </span><span class="calc-label">Bare bright reference</span><span class="calc-val" data-field="calc-bare-bright">$5.05/lb</span></span><span class="calc-row"><span class="calc-op" aria-hidden="true">−</span><span class="calc-label">Insulated wire reference</span><span class="calc-val" data-field="calc-insulated">$1.75/lb</span></span><span class="calc-row calc-rule"><span class="calc-op" aria-hidden="true">=</span><span class="calc-label"><strong>Strip value delta</strong></span><span class="calc-val" data-field="calc-strip-delta"><strong>+$3.30/lb</strong></span></span><span class="calc-row calc-extension"><span class="calc-op" aria-hidden="true">×</span><span class="calc-label" data-field="calc-spread-label">50 lb recovered</span><span class="calc-val" data-field="calc-spread-value">≈ $165 raw-material spread</span></span></pre>
+              <figcaption>Reference rates only. Not a guarantee of yard price or return on investment.</figcaption>
+            </figure>
+
+            <h3 class="method-heading">Sources</h3>
+            <ul class="source-list">
+              <li><a href="https://tradingeconomics.com/commodity/copper" target="_blank" rel="noopener noreferrer">Trading Economics — copper market reference</a></li>
+              <li><a href="https://www.jpmorgan.com/insights/global-research/commodities/copper-outlook" target="_blank" rel="noopener noreferrer">J.P. Morgan — copper outlook</a></li>
+              <li><a href="https://natural-resources.canada.ca/minerals-mining/mining-data-statistics-analysis/minerals-metals-facts/copper-facts" target="_blank" rel="noopener noreferrer">Natural Resources Canada — copper facts</a></li>
+              <li><a href="https://internationalcopper.org/wp-content/uploads/2022/02/ICA-RecyclingBrief-202201-A4-R2.pdf" target="_blank" rel="noopener noreferrer">International Copper Association — recycling brief</a></li>
+              <li><a href="https://rockawayrecycling.com/metal/1-bare-bright-wire/" target="_blank" rel="noopener noreferrer">Rockaway Recycling — #1 bare bright wire reference price</a></li>
+              <li><a href="https://www.scrapmonster.com/scrap-prices/category/Copper-Scrap/128/1/1" target="_blank" rel="noopener noreferrer">ScrapMonster — copper scrap prices &amp; insulated wire recovery grades</a></li>
+              <li><a href="https://iscrapapp.com/metals/bare-bright-copper/" target="_blank" rel="noopener noreferrer">iScrap App — bare bright copper</a></li>
+              <li><a href="https://iscrapapp.com/metals/insulated-copper-wire/" target="_blank" rel="noopener noreferrer">iScrap App — insulated copper wire</a></li>
+              <li><a href="https://www.stripmeister.com/pages/scrap-calculator" target="_blank" rel="noopener noreferrer">StripMeister — scrap calculator</a></li>
+              <li><a href="https://www.stripmeister.com/pages/compare-machines" target="_blank" rel="noopener noreferrer">StripMeister — compare machines</a></li>
+            </ul>
+
             <p class="disclaimer">
-              Internal prototype only. This widget is a marketing decision aid and does not provide financial advice,
-              scrap-yard pricing guarantees, or a promise of return on investment.
+              Internal prototype only. This widget is a marketing decision aid, not financial advice, scrap-yard
+              pricing, or a guarantee of return on investment.
             </p>
           </div>
         </details>
