@@ -481,7 +481,15 @@ async function main() {
           'Daily reference rate from Bank of Canada. Not a transactional rate; banks and yards apply their own spreads. Display-only conversion.',
       },
       fetch_status: fxStatus,
-      manual_override: fxOverride !== null ? round(fxOverride, 4) : (existingFx.manual_override ?? null),
+      // manual_override reflects ONLY this run: a numeric override when
+      // FX_USD_CAD_OVERRIDE is actively supplied (and within the sane
+      // 0.5–3.0 band), otherwise null. We deliberately do NOT carry
+      // forward a prior override here — the previous run's flag should
+      // not masquerade as the current run's source of truth.
+      manual_override:
+        fxOverride !== null && fxOverride > 0.5 && fxOverride < 3.0
+          ? round(fxOverride, 4)
+          : null,
     },
     fetch_status: {
       ...(data.fetch_status || {}),

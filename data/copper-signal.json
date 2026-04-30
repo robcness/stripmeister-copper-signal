@@ -140,7 +140,7 @@
       "caveat": "Daily noon-style reference rate from Bank of Canada. Not a transactional rate; banks and yards apply their own spreads. Display-only conversion."
     },
     "fetch_status": "bank-of-canada",
-    "manual_override": 1.39
+    "manual_override": null
   },
   "fetch_status": {
     "copper_reference": "yahoo-finance",
