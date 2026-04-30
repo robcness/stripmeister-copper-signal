@@ -31,25 +31,29 @@
               <h1 id="widget-title">Copper Recovery Signal</h1>
             </div>
           </div>
-          <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
-            <span data-theme-icon>Light</span>
+          <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme">
+            <span data-theme-icon>Theme</span>
           </button>
         </div>
 
         <div class="signal-grid">
           <article class="signal-card primary-signal" aria-labelledby="signal-label">
             <p id="signal-label" class="metric-label">Today’s buying signal</p>
-            <div class="signal-meter" aria-label="Strong recovery window: 82 out of 100">
-              <svg viewBox="0 0 240 132" role="img" aria-labelledby="gauge-title gauge-desc">
-                <title id="gauge-title">Copper recovery signal gauge</title>
-                <desc id="gauge-desc">The current prototype score is 82 out of 100, labeled Strong recovery window.</desc>
-                <path class="gauge-track" d="M28 112a92 92 0 0 1 184 0" />
-                <path class="gauge-fill" d="M28 112a92 92 0 0 1 184 0" pathLength="100" />
-                <circle class="gauge-marker" cx="193" cy="69" r="7" />
-              </svg>
+            <div class="score-block" aria-label="Strong recovery window: 82 out of 100">
               <div class="signal-score">
                 <strong>82</strong>
                 <span>/100</span>
+              </div>
+              <div class="score-rail" role="img" aria-label="Score zones: red below 45, amber from 45 to 70, green above 70. Current score is 82.">
+                <span class="score-zone red-zone"></span>
+                <span class="score-zone amber-zone"></span>
+                <span class="score-zone green-zone"></span>
+                <span class="score-marker" aria-hidden="true"></span>
+              </div>
+              <div class="score-labels" aria-hidden="true">
+                <span>Wait</span>
+                <span>Watch</span>
+                <span>Buy</span>
               </div>
             </div>
             <h2>Strong recovery window</h2>
@@ -135,44 +139,45 @@
             </ol>
           </div>
 
-          <aside class="cta-card" aria-labelledby="cta-title">
+        </div>
+        <aside class="cta-card" aria-labelledby="cta-title">
+          <div>
             <p class="eyebrow">Recommended next step</p>
             <h2 id="cta-title">Turn wire into a recovery plan</h2>
             <p>
-              Use StripMeister’s existing tools to estimate recoverable value, then choose the machine that matches
-              your wire size, workspace, and volume.
+              Estimate recoverable value, then choose the machine that matches your wire size, workspace, and volume.
             </p>
-            <div class="cta-stack" aria-label="StripMeister action links">
-              <a
-                class="button primary"
-                href="https://www.stripmeister.com/pages/scrap-calculator"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-scrap-calculator"
-              >
-                Calculate your wire recovery
-              </a>
-              <a
-                class="button secondary"
-                href="https://www.stripmeister.com/pages/compare-machines"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-compare-machines"
-              >
-                Compare StripMeister models
-              </a>
-              <a
-                class="button tertiary"
-                href="https://www.stripmeister.com#shopify-section-template--18912940359751__sm_desktop_all_products_v2_QU9pWA"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-model-finder"
-              >
-                Find your StripMeister model
-              </a>
-            </div>
-          </aside>
-        </div>
+          </div>
+          <div class="cta-stack" aria-label="StripMeister action links">
+            <a
+              class="button primary"
+              href="https://www.stripmeister.com/pages/scrap-calculator"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-scrap-calculator"
+            >
+              Calculate your wire recovery
+            </a>
+            <a
+              class="button secondary"
+              href="https://www.stripmeister.com/pages/compare-machines"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-compare-machines"
+            >
+              Compare StripMeister models
+            </a>
+            <a
+              class="button tertiary"
+              href="https://www.stripmeister.com#shopify-section-template--18912940359751__sm_desktop_all_products_v2_QU9pWA"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-model-finder"
+            >
+              Find your StripMeister model
+            </a>
+          </div>
+        </aside>
       </section>
 
       <footer class="source-panel">

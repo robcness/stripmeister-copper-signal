@@ -4,7 +4,7 @@ const icon = document.querySelector('[data-theme-icon]');
 
 function setTheme(nextTheme) {
   root.setAttribute('data-theme', nextTheme);
-  if (icon) icon.textContent = nextTheme === 'dark' ? 'Light' : 'Dark';
+  if (icon) icon.textContent = 'Theme';
   if (button) button.setAttribute('aria-label', `Switch to ${nextTheme === 'dark' ? 'light' : 'dark'} theme`);
 }
 
