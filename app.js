@@ -15,3 +15,15 @@ button?.addEventListener('click', () => {
   const current = root.getAttribute('data-theme') || 'dark';
   setTheme(current === 'dark' ? 'light' : 'dark');
 });
+
+const modelFinderLink = document.querySelector('[data-testid="link-model-finder"]');
+
+function updateModelFinderAnchor() {
+  if (!modelFinderLink) return;
+  const desktopAnchor = 'https://www.stripmeister.com#shopify-section-template--18912940359751__sm_desktop_all_products_v2_QU9pWA';
+  const mobileAnchor = 'https://www.stripmeister.com#shopify-section-template--18912940359751__sm_mobile_products_v3_Da6cGT';
+  modelFinderLink.href = window.matchMedia('(max-width: 768px)').matches ? mobileAnchor : desktopAnchor;
+}
+
+updateModelFinderAnchor();
+window.addEventListener('resize', updateModelFinderAnchor);
