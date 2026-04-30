@@ -306,14 +306,10 @@ p {
   filter: drop-shadow(0 0 16px color-mix(in srgb, var(--color-copper-strong) 38%, transparent));
 }
 
-.gauge-needle {
-  stroke: var(--color-text);
-  stroke-linecap: round;
-  stroke-width: 3;
-}
-
-.gauge-hub {
+.gauge-marker {
   fill: var(--color-text);
+  stroke: var(--color-surface-2);
+  stroke-width: 4;
 }
 
 .signal-score {
