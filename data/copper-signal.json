@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-04-30T22:51:10.265Z",
+  "generated_at": "2026-04-30T23:02:20.999Z",
   "last_updated": "2026-04-30",
-  "last_checked": "2026-04-30T22:51:10.265Z",
+  "last_checked": "2026-04-30T23:02:20.999Z",
   "copper": {
-    "reference_price_usd_per_lb": 6.0295,
+    "reference_price_usd_per_lb": 6.0265,
     "as_of_date": "2026-04-30",
-    "delta_30d_pct": 7.91,
-    "delta_12mo_pct": 32.23,
-    "delta_5yr_pct": 34.62,
+    "delta_30d_pct": 7.86,
+    "delta_12mo_pct": 32.16,
+    "delta_5yr_pct": 34.55,
     "history": {
       "close_2021_04_30": 4.468,
       "close_2025_04_30": 4.609,
       "close_2026_04_30": 5.976,
       "latest": {
         "date": "2026-04-30",
-        "close": 6.0295
+        "close": 6.0265
       },
       "d30": {
         "date": "2026-03-31",
