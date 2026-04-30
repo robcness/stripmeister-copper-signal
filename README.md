@@ -120,6 +120,28 @@ always matches the displayed value.
   “CAD rate unavailable · showing USD reference values.” The widget never displays
   unconverted USD values under a CAD label.
 
+### Currency-sensitive copy (USD vs. CAD wording)
+
+Alongside the numeric conversion, a tiny localization layer in `app.js` swaps a
+handful of phrases to read naturally in each market. This is intentionally
+restrained — commodity terms, units (lb, gauge), grade names, and product names
+are **not** localized.
+
+Marked-up phrases live on `data-copy="<key>"` elements in the HTML; the `COPY`
+map in `app.js` provides the USD and CAD strings. Missing keys silently fall
+back to USD so the DOM is never blanked.
+
+Current keys:
+
+| Key             | USD                                                                                | CAD                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `verify-local`  | “your local scrap yard before committing volume …”                                 | “your local scrap yard or recycler before committing volume …”                                     |
+| `manual-labor`  | “current manual labor hours”                                                       | “current manual labour hours”                                                                      |
+| `yards-grading` | “Local scrap yards quote daily and apply their own grading; confirm with the buyer” | “Local scrap yards and recyclers quote daily and apply their own grading; confirm with the buyer” |
+
+The locale is re-applied on every currency toggle, including the static-fallback
+path where live JSON failed to load.
+
 ### Test IDs
 
 For automated checks, every converted value carries a stable `data-testid`:
@@ -132,6 +154,7 @@ For automated checks, every converted value carries a stable `data-testid`:
 - `text-currency-code` (the small “(USD)” / “(CAD)” marker in the spread copy)
 - `text-method-copper-price`, `text-method-strip-delta`
 - `block-calc`, `text-calc-bare-bright`, `text-calc-insulated`, `text-calc-strip-delta`, `text-calc-spread-value`
+- `copy-verify-local`, `copy-manual-labor`, `copy-yards-grading` (currency-sensitive copy hooks)
 
 ## Prototype scoring model
 

@@ -140,6 +140,53 @@ function convertHistoryClose(usdClose, rate) {
   return Math.round(usdClose * rate * 1000) / 1000;
 }
 
+// ----- Currency-sensitive copy ---------------------------------------------
+//
+// A small localization layer keyed off the displayed currency. USD shows U.S.
+// English copy (the default already in the HTML); CAD shows Canadian-spelled,
+// Canada-aware variants. This is intentionally restrained — it covers a few
+// places where the wording would read awkwardly to a Canadian audience and
+// nothing else. Commodity terms, unit names (lb, gauge), and product names
+// are NOT localized.
+//
+// Phrases live on elements marked with `data-copy="<key>"`. If a key is
+// missing from the map for a given currency, the existing text is left in
+// place (graceful fallback — never blanks the DOM).
+
+const COPY = {
+  USD: {
+    'verify-local':
+      'your local scrap yard before committing volume \u2014 copper pricing is regional and moves daily.',
+    'manual-labor': 'current manual labor hours',
+    'yards-grading':
+      'Local scrap yards quote daily and apply their\n              own grading; confirm with the buyer before committing volume.',
+  },
+  CAD: {
+    'verify-local':
+      'your local scrap yard or recycler before committing volume \u2014 copper pricing is regional and moves daily.',
+    'manual-labor': 'current manual labour hours',
+    'yards-grading':
+      'Local scrap yards and recyclers quote daily and apply their\n              own grading; confirm with the buyer before committing volume.',
+  },
+};
+
+function applyCopyLocale(currency) {
+  const locale = COPY[currency] || COPY.USD;
+  document.querySelectorAll('[data-copy]').forEach((el) => {
+    const key = el.getAttribute('data-copy');
+    if (!key) return;
+    const next = locale[key];
+    // Fall back to USD if the requested locale is missing this key — never
+    // wipe the existing DOM text.
+    const fallback = COPY.USD[key];
+    if (typeof next === 'string') {
+      el.textContent = next;
+    } else if (typeof fallback === 'string') {
+      el.textContent = fallback;
+    }
+  });
+}
+
 // ----- Render ---------------------------------------------------------------
 //
 // Field map (data-field → JSON path, in displayed currency):
@@ -180,6 +227,9 @@ function render() {
   const unitPerLb = `${effectiveCurrency}/lb`;
   setText('unit-per-lb', unitPerLb);
   setText('unit-currency-code', effectiveCurrency);
+
+  // ---- Currency-sensitive copy -------------------------------------------
+  applyCopyLocale(effectiveCurrency);
 
   // ---- FX meta (caption) --------------------------------------------------
   const fxAsOf = fx.as_of_date || '';
@@ -338,6 +388,10 @@ function setCurrency(nextCurrency) {
     btn.classList.toggle('is-active', isActive);
     btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
   });
+
+  // Always swap copy locale, even before / without live data — numbers stay
+  // on whatever the static HTML provided, but spelling/phrasing still flips.
+  applyCopyLocale(next);
 
   render();
 }
