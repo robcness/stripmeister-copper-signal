@@ -38,14 +38,16 @@
       <section class="hero-panel" aria-describedby="signal-summary">
         <div class="brand-row">
           <div class="brand-lockup">
-            <a class="brand-wordmark" href="https://www.stripmeister.com" target="_blank" rel="noopener noreferrer" aria-label="StripMeister">
-              <svg class="brand-jaw" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
-                <!-- Compact bracket-jaw glyph: a stylized wire-stripper bite,
-                     not a full logo replica. Pure CSS color via currentColor. -->
-                <path d="M3 3h6v2.6H5.6v6.8H9V15H3V3Z" fill="currentColor" />
-                <path d="M15 3h-6v2.6h3.4v6.8H9V15h6V3Z" fill="currentColor" opacity="0.55" />
-              </svg>
-              <span class="brand-wordmark-text">STRIPMEISTER</span>
+            <a class="brand-mark" href="https://www.stripmeister.com" target="_blank" rel="noopener noreferrer" aria-label="StripMeister — Wire Stripping Machines">
+              <img
+                class="brand-mark-img"
+                src="./assets/stripmeister-logo.png"
+                width="500"
+                height="59"
+                alt="StripMeister — Wire Stripping Machines"
+                decoding="async"
+                loading="eager"
+              />
             </a>
             <h1 id="widget-title">Copper Recovery Signal</h1>
           </div>
@@ -134,8 +136,14 @@
 
             <h2 data-field="signal-headline">Strong recovery window</h2>
             <p id="signal-summary" data-field="signal-summary">
-              Copper is near a five-year high and still climbing. If you have wire on hand, run the
-              recovery math now.
+              Copper is near a five-year high and still climbing. If you have wire on hand,
+              <a
+                class="signal-summary-link"
+                href="https://www.stripmeister.com/pages/scrap-calculator"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="link-summary-calculator"
+              >run the recovery math now<span class="signal-summary-link-arrow" aria-hidden="true">→</span></a>.
             </p>
           </article>
 

@@ -217,40 +217,50 @@ a { color: inherit; }
   gap: var(--space-2);
 }
 
-/* StripMeister wordmark — compact red typographic mark used as the page brand stamp.
-   This is a typographic treatment, not a replica of any official logo asset. */
-.brand-wordmark {
+/* StripMeister logo — official wordmark served from /assets.
+   The PNG is 500×59 (≈ 8.47:1). We size by height and let width follow the
+   aspect ratio so the logo never warps or pixelates. */
+.brand-mark {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.6rem 0.3rem 0.5rem;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  padding: 0.25rem 0;
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-  color: var(--color-primary);
   text-decoration: none;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition: opacity 140ms ease, transform 140ms ease;
 }
 
-.brand-wordmark:hover,
-.brand-wordmark:focus-visible {
-  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
-  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+.brand-mark:hover,
+.brand-mark:focus-visible {
+  opacity: 0.92;
   outline: none;
 }
 
-.brand-jaw {
-  width: 1.05rem;
-  height: 1.05rem;
-  flex: 0 0 auto;
+.brand-mark:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
 }
 
-.brand-wordmark-text {
-  font-weight: 900;
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
-  line-height: 1;
-  font-feature-settings: "ss01";
+.brand-mark-img {
+  display: block;
+  width: auto;
+  height: clamp(1.85rem, 1.4rem + 1.4vw, 2.5rem); /* ~30–40 px */
+  max-width: min(220px, 60vw);
+  object-fit: contain;
+  /* The official asset reads in dark gray + brand red on a light field.
+     On the dark theme it is paired against a charcoal panel — invert luminance
+     of the dark text only via CSS filter so we keep one canonical asset. */
+  filter: none;
+}
+
+/* Dark theme: the canonical PNG is dark-on-light. Rather than recolor it (which
+   would lose the brand-red STRIP), we wrap the image in a subtle cream chip so
+   the wordmark stays brand-accurate against the charcoal hero panel. */
+[data-theme='dark'] .brand-mark {
+  padding: 0.35rem 0.55rem;
+  background: #f6f1e9;
+  border: 1px solid color-mix(in srgb, var(--color-copper) 30%, transparent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18) inset, 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 /* .eyebrow retained because it is still used inside the CTA card */
@@ -305,39 +315,48 @@ p { color: var(--color-text-muted); }
   border-color: var(--color-primary);
 }
 
-/* === Currency toolbar (USD/CAD toggle) === */
+/* === Currency toolbar (USD/CAD toggle) ===
+   Visual language modeled on the StripMeister scrap calculator page:
+   subtle off-white field, segmented pill where the active segment becomes a
+   white card with a thin dark border (the calculator’s “selected” treatment),
+   inactive segments are quiet/transparent. We keep the brand-red border accent
+   on the parent rail (subtle, not loud) to echo the calculator’s red-bordered
+   number inputs without recoloring our existing palette. */
 .currency-toolbar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
   margin: 0 0 var(--space-5);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
 }
 
 .currency-toolbar-label {
   margin: 0;
-  /* Re-use .metric-label color/spacing/case but suppress its bottom margin */
+  color: var(--color-text-muted);
+  /* Re-use .metric-label color/spacing/case but quieter — the calculator page
+     uses muted gray field labels above its inputs, not red. */
 }
 
 .currency-toggle {
   display: inline-flex;
-  padding: 2px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  gap: 0;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 90%, transparent);
+  border-radius: 10px; /* squarer than a full pill, matches calculator chips */
+  background: color-mix(in srgb, var(--color-surface-offset) 55%, transparent);
+  gap: 2px;
 }
 
 .currency-toggle-btn {
   appearance: none;
-  border: 0;
+  border: 1px solid transparent;
   margin: 0;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+  border-radius: 8px;
   background: transparent;
   color: var(--color-text-muted);
   font-family: inherit;
@@ -345,36 +364,45 @@ p { color: var(--color-text-muted); }
   font-weight: 800;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   font-variant-numeric: tabular-nums lining-nums;
 }
 
 .currency-toggle-btn:hover {
   color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
 }
 
 .currency-toggle-btn:focus-visible {
-  outline: 2px solid var(--color-copper);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .currency-toggle-btn.is-active {
-  background: var(--color-charcoal);
-  color: #f6f1e9;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-copper) 45%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 18%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 [data-theme='dark'] .currency-toggle-btn.is-active {
   background: var(--color-surface-offset);
   color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-copper) 30%, transparent);
 }
 
 .currency-toggle-dollar {
-  margin-left: 0.15rem;
-  color: var(--color-copper);
+  margin-left: 0.18rem;
+  color: var(--color-text-faint);
+  font-weight: 900;
 }
 
 .currency-toggle-btn.is-active .currency-toggle-dollar {
+  color: var(--color-primary);
+}
+
+[data-theme='dark'] .currency-toggle-btn.is-active .currency-toggle-dollar {
   color: var(--color-copper-bright);
 }
 
@@ -395,6 +423,43 @@ p { color: var(--color-text-muted); }
     flex-basis: 100%;
     text-align: left;
   }
+}
+
+/* Inline call-to-action inside the hero summary — “run the recovery math now”.
+   Sits inline with surrounding sentence; subtle copper underline + small arrow
+   to signal it is a link without disrupting the hero typography. */
+.signal-summary-link {
+  color: var(--color-text);
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-copper) 70%, transparent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  border-radius: 2px;
+  transition: color 140ms ease, text-decoration-color 140ms ease;
+  white-space: normal;
+}
+.signal-summary-link:hover {
+  color: var(--color-copper-deep);
+  text-decoration-color: var(--color-copper);
+}
+[data-theme='dark'] .signal-summary-link:hover {
+  color: var(--color-copper-bright);
+}
+.signal-summary-link-arrow {
+  display: inline-block;
+  margin-left: 0.25rem;
+  font-weight: 900;
+  color: var(--color-copper);
+  transform: translateY(-1px);
+  transition: transform 160ms ease;
+}
+.signal-summary-link:hover .signal-summary-link-arrow {
+  transform: translate(2px, -1px);
+}
+.signal-summary-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 
 /* === Hero signal grid === */

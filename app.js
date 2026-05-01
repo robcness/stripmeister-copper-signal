@@ -100,6 +100,44 @@ function setStatus(field, status) {
   });
 }
 
+// Render the hero summary text with an inline “run the recovery math now”
+// link to the StripMeister scrap calculator. We avoid blanket innerHTML on
+// arbitrary JSON: only the literal phrase “run the recovery math now” (case-
+// insensitive) is wrapped, and only when present. Surrounding text is set as
+// plain text via DOM nodes, so JSON content is never interpreted as HTML.
+function renderSignalSummary(summary) {
+  const els = document.querySelectorAll('[data-field="signal-summary"]');
+  if (!els.length) return;
+  const phrase = 'run the recovery math now';
+  const href = 'https://www.stripmeister.com/pages/scrap-calculator';
+  els.forEach((el) => {
+    el.textContent = '';
+    const idx = summary.toLowerCase().indexOf(phrase);
+    if (idx === -1) {
+      el.textContent = summary;
+      return;
+    }
+    const before = summary.slice(0, idx);
+    const matched = summary.slice(idx, idx + phrase.length);
+    const after = summary.slice(idx + phrase.length);
+    if (before) el.appendChild(document.createTextNode(before));
+    const a = document.createElement('a');
+    a.className = 'signal-summary-link';
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.setAttribute('data-testid', 'link-summary-calculator');
+    a.appendChild(document.createTextNode(matched));
+    const arrow = document.createElement('span');
+    arrow.className = 'signal-summary-link-arrow';
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.textContent = '\u2192';
+    a.appendChild(arrow);
+    el.appendChild(a);
+    if (after) el.appendChild(document.createTextNode(after));
+  });
+}
+
 function deriveStatus(n) {
   if (typeof n !== 'number' || !Number.isFinite(n)) return undefined;
   if (n > 0) return 'positive';
@@ -297,7 +335,7 @@ function render() {
   if (typeof sig.score_max === 'number') setText('signal-score-max', sig.score_max);
   if (sig.label) setText('signal-label', sig.label);
   if (sig.headline) setText('signal-headline', sig.headline);
-  if (sig.summary) setText('signal-summary', sig.summary);
+  if (sig.summary) renderSignalSummary(sig.summary);
 
   // ---- Methodology table -------------------------------------------------
   if (typeof copperShown === 'number') {
