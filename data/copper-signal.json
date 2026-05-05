@@ -1,33 +1,33 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-04T15:30:02.811Z",
-  "last_updated": "2026-05-04",
-  "last_checked": "2026-05-04T15:30:02.811Z",
+  "generated_at": "2026-05-05T23:59:58.148Z",
+  "last_updated": "2026-05-05",
+  "last_checked": "2026-05-05T23:59:58.148Z",
   "copper": {
-    "reference_price_usd_per_lb": 6.025,
-    "as_of_date": "2026-04-30",
-    "delta_30d_pct": 7.83,
-    "delta_12mo_pct": 32.13,
-    "delta_5yr_pct": 34.52,
+    "reference_price_usd_per_lb": 6.005,
+    "as_of_date": "2026-05-05",
+    "delta_30d_pct": 7.95,
+    "delta_12mo_pct": 29,
+    "delta_5yr_pct": 32.3,
     "history": {
       "close_2021_04_30": 4.468,
       "close_2025_04_30": 4.609,
       "close_2026_04_30": 5.976,
       "latest": {
-        "date": "2026-04-30",
-        "close": 6.025
+        "date": "2026-05-05",
+        "close": 6.005
       },
       "d30": {
-        "date": "2026-03-31",
-        "close": 5.5875
+        "date": "2026-04-05",
+        "close": 5.563
       },
       "y1": {
-        "date": "2025-04-30",
-        "close": 4.56
+        "date": "2025-05-05",
+        "close": 4.655
       },
       "y5": {
-        "date": "2021-04-30",
-        "close": 4.479
+        "date": "2021-05-05",
+        "close": 4.539
       }
     },
     "deltas_status": {
@@ -132,8 +132,8 @@
   "fx": {
     "base_currency": "USD",
     "quote_currency": "CAD",
-    "usd_to_cad": 1.3624,
-    "as_of_date": "2026-04-30",
+    "usd_to_cad": 1.3617,
+    "as_of_date": "2026-05-05",
     "source": {
       "label": "Bank of Canada Valet — FXUSDCAD",
       "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
@@ -147,6 +147,6 @@
     "bare_bright": "manual",
     "insulated_wire": "manual",
     "fx_usd_cad": "bank-of-canada",
-    "notes": "Timestamps only. Set FETCH_SOURCES=1 to attempt live copper + FX fetch. Scrap values stay manual."
+    "notes": "Live fetch attempted via Yahoo Finance HG=F and Bank of Canada Valet (FXUSDCAD). Scrap reference values are manual by design — see scripts/update-copper-data.mjs header for rationale."
   }
 }
