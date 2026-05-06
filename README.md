@@ -197,11 +197,38 @@ hardcoded HTML values remain, so the page always renders.
 ### Update cadence
 
 - **GitHub Actions workflow:** `.github/workflows/update-copper-data.yml`
-  runs on a daily schedule (`30 13 * * *`, ≈ 09:30 ET) and on manual
-  `workflow_dispatch`. It runs `node scripts/update-copper-data.mjs`, which
-  reads the JSON, optionally pulls fresh source values, recomputes deltas
-  and spread, and writes the file back. The workflow commits the file only
-  if something changed.
+  runs every weekday at **09:30 America/New_York** (Eastern Time),
+  excluding weekends and U.S. market holidays. Manual `workflow_dispatch`
+  is also available and **always bypasses** the schedule guard, so a
+  human-initiated rerun is never blocked. The job runs
+  `node scripts/update-copper-data.mjs`, which reads the JSON, optionally
+  pulls fresh source values, recomputes deltas and spread, and writes the
+  file back. The workflow commits the file only if something changed.
+
+  GitHub's `schedule:` cron is UTC-only with no DST or holiday awareness,
+  so the workflow registers two cron entries — `30 13 * * 1-5` and
+  `30 14 * * 1-5` — and `scripts/schedule-guard.mjs` gates the run on
+  the actual local Eastern time + weekday + market-holiday calendar.
+  Between EDT (UTC-4) and EST (UTC-5), exactly one of those two crons
+  hits 09:30 ET on any given weekday; the other is skipped by the guard.
+
+  The guard's holiday calendar is a transparent **U.S. equity / CME-style
+  market-holiday list** (defined in `scripts/schedule-guard.mjs` as
+  `HOLIDAYS_2026` / `HOLIDAYS_2027`): New Year's Day observed, MLK Day,
+  Presidents' Day, Good Friday, Memorial Day, Juneteenth observed,
+  Independence Day observed, Labor Day, Thanksgiving, and Christmas
+  observed. We chose U.S. market holidays because the live copper source
+  is COMEX High Grade Copper futures (`HG=F`) on CME, which follows the
+  U.S. holiday calendar. To switch to Canadian statutory holidays later,
+  edit those tables in `schedule-guard.mjs` and update this paragraph.
+
+  Guard logic is unit-tested in `scripts/test-schedule-guard.mjs` —
+  scenarios cover EDT vs EST, weekend skips, holiday skips, drift
+  tolerance, and an `America/Toronto` cross-check. Run with:
+
+  ```bash
+  node scripts/test-schedule-guard.mjs
+  ```
 - **Conservative by default.** Without `FETCH_SOURCES=1` the script only
   refreshes `generated_at` / `last_checked` and leaves market values
   untouched. That keeps the page stable on a bad-network day and avoids

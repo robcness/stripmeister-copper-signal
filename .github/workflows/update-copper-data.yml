@@ -3,6 +3,17 @@ name: Update copper signal data
 # Refreshes data/copper-signal.json on a schedule. Conservative by default:
 # only timestamps move unless source fetchers are explicitly enabled or
 # manual overrides are supplied via workflow_dispatch inputs. No paid APIs.
+#
+# Schedule: weekdays at 09:30 America/New_York, excluding U.S. market
+# holidays. Because GitHub's `schedule:` cron is UTC-only and has no DST
+# or holiday awareness, we cron at BOTH 13:30 and 14:30 UTC Mon–Fri:
+#   - 13:30 UTC == 09:30 America/New_York during EDT (Mar–Nov)
+#   - 14:30 UTC == 09:30 America/New_York during EST (Nov–Mar)
+# A guard step (`scripts/schedule-guard.mjs`) gates the actual run on the
+# correct local time, weekday, and a transparent U.S./CME-style market
+# holiday calendar (see that script for the full list and rationale).
+# `workflow_dispatch` (manual) runs ALWAYS bypass the guard so a human
+# rerun is never blocked.
 
 on:
   workflow_dispatch:
@@ -28,9 +39,11 @@ on:
         required: false
         default: ""
   schedule:
-    # Daily at 13:30 UTC ≈ 09:30 ET, after US copper futures open.
-    # Adjust freely; GitHub may delay scheduled runs under load.
-    - cron: "30 13 * * *"
+    # Weekdays only. Two UTC entries cover both DST and standard time so
+    # one of them lands on 09:30 America/New_York every weekday year-round.
+    # The schedule-guard step picks the correct one and skips the other.
+    - cron: "30 13 * * 1-5" # 09:30 EDT (Mar–Nov); 08:30 EST (Nov–Mar, skipped)
+    - cron: "30 14 * * 1-5" # 10:30 EDT (Mar–Nov, skipped); 09:30 EST (Nov–Mar)
 
 permissions:
   contents: write
@@ -56,7 +69,18 @@ jobs:
         with:
           node-version: "20"
 
+      # Manual workflow_dispatch always bypasses the schedule guard so a
+      # human-initiated rerun is never blocked by the local-time/holiday
+      # check. Only `schedule`-triggered runs are gated.
+      - name: Schedule guard (only on schedule trigger)
+        id: guard
+        if: github.event_name == 'schedule'
+        run: node scripts/schedule-guard.mjs
+
       - name: Run updater
+        # Run unconditionally on workflow_dispatch; on schedule, only when
+        # the guard's `run` output is true.
+        if: github.event_name != 'schedule' || steps.guard.outputs.run == 'true'
         env:
           FETCH_SOURCES: ${{ github.event.inputs.fetch_sources == 'true' && '1' || '0' }}
           COPPER_OVERRIDE: ${{ github.event.inputs.copper_override }}
@@ -66,6 +90,7 @@ jobs:
         run: node scripts/update-copper-data.mjs
 
       - name: Commit changes (if any)
+        if: github.event_name != 'schedule' || steps.guard.outputs.run == 'true'
         run: |
           set -euo pipefail
           if [[ -n "$(git status --porcelain data/copper-signal.json)" ]]; then
