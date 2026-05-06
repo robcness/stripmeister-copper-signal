@@ -93,12 +93,78 @@ jobs:
         if: github.event_name != 'schedule' || steps.guard.outputs.run == 'true'
         run: |
           set -euo pipefail
-          if [[ -n "$(git status --porcelain data/copper-signal.json)" ]]; then
-            git config user.name  "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data/copper-signal.json
-            git commit -m "chore(data): refresh copper-signal.json [skip ci]"
-            git push
-          else
+
+          DATA_FILE="data/copper-signal.json"
+
+          # If the updater produced no local diff, nothing to do.
+          if [[ -z "$(git status --porcelain "$DATA_FILE")" ]]; then
             echo "No changes to commit."
+            exit 0
           fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Reconcile with origin first: another concurrent run may have
+          # already pushed an equivalent data commit (race). Stash our
+          # working copy, pull --rebase, then re-check whether the file
+          # still differs meaningfully from origin/main.
+          git fetch origin main
+
+          # Save the locally-updated data file to a side path so a rebase
+          # cannot lose it. (We only ever modify this one tracked file.)
+          cp "$DATA_FILE" "$RUNNER_TEMP/copper-signal.local.json"
+
+          # Discard the local working tree change so rebase is clean,
+          # then fast-forward / rebase onto origin/main.
+          git checkout -- "$DATA_FILE"
+          git pull --rebase --autostash origin main
+
+          # Restore our freshly-computed data file on top of the rebased tree.
+          cp "$RUNNER_TEMP/copper-signal.local.json" "$DATA_FILE"
+
+          # If, after pulling, the file no longer differs from what is on
+          # origin/main, another run already landed an equivalent refresh.
+          # Treat as success.
+          if git diff --quiet -- "$DATA_FILE"; then
+            echo "Data file matches origin/main after pull; another run already refreshed it. Nothing to commit."
+            exit 0
+          fi
+
+          git add "$DATA_FILE"
+          git commit -m "chore(data): refresh copper-signal.json [skip ci]"
+
+          # First push attempt.
+          if git push origin HEAD:main; then
+            echo "Pushed data refresh on first attempt."
+            exit 0
+          fi
+
+          echo "Initial push failed; investigating remote state..."
+          git fetch origin main
+
+          LOCAL_HEAD="$(git rev-parse HEAD)"
+          REMOTE_HEAD="$(git rev-parse origin/main)"
+
+          # If our HEAD is already reachable from origin/main, somebody
+          # (likely a sibling run) already pushed an equivalent commit.
+          if git merge-base --is-ancestor "$LOCAL_HEAD" "$REMOTE_HEAD"; then
+            echo "Local HEAD $LOCAL_HEAD is already contained in origin/main ($REMOTE_HEAD). Nothing to do."
+            exit 0
+          fi
+
+          # Or, if origin/main's version of the data file matches ours,
+          # the refresh is effectively already published — bail out clean.
+          if git show "origin/main:$DATA_FILE" > "$RUNNER_TEMP/copper-signal.remote.json" 2>/dev/null \
+             && cmp -s "$DATA_FILE" "$RUNNER_TEMP/copper-signal.remote.json"; then
+            echo "origin/main already has an equivalent $DATA_FILE. Nothing to do."
+            exit 0
+          fi
+
+          # Otherwise rebase our single data commit onto the new remote
+          # tip and retry the push exactly once. No loops.
+          echo "Rebasing onto origin/main and retrying push once..."
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "Pushed data refresh after one rebase retry."
+
