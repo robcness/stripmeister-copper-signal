@@ -1,33 +1,33 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-06T00:06:55.644Z",
-  "last_updated": "2026-05-06",
-  "last_checked": "2026-05-06T00:06:55.644Z",
+  "generated_at": "2026-05-07T16:11:21.291Z",
+  "last_updated": "2026-05-07",
+  "last_checked": "2026-05-07T16:11:21.291Z",
   "copper": {
-    "reference_price_usd_per_lb": 6.003,
-    "as_of_date": "2026-05-05",
-    "delta_30d_pct": 7.51,
-    "delta_12mo_pct": 26.78,
-    "delta_5yr_pct": 29.96,
+    "reference_price_usd_per_lb": 6.191,
+    "as_of_date": "2026-05-07",
+    "delta_30d_pct": 11.66,
+    "delta_12mo_pct": 34.11,
+    "delta_5yr_pct": 29.9,
     "history": {
       "close_2021_04_30": 4.468,
       "close_2025_04_30": 4.609,
       "close_2026_04_30": 5.976,
       "latest": {
-        "date": "2026-05-05",
-        "close": 6.003
+        "date": "2026-05-07",
+        "close": 6.191
       },
       "d30": {
-        "date": "2026-04-06",
-        "close": 5.5835
+        "date": "2026-04-07",
+        "close": 5.5445
       },
       "y1": {
-        "date": "2025-05-06",
-        "close": 4.735
+        "date": "2025-05-07",
+        "close": 4.6165
       },
       "y5": {
-        "date": "2021-05-06",
-        "close": 4.619
+        "date": "2021-05-07",
+        "close": 4.766
       }
     },
     "deltas_status": {
@@ -132,8 +132,8 @@
   "fx": {
     "base_currency": "USD",
     "quote_currency": "CAD",
-    "usd_to_cad": 1.3617,
-    "as_of_date": "2026-05-05",
+    "usd_to_cad": 1.3625,
+    "as_of_date": "2026-05-06",
     "source": {
       "label": "Bank of Canada Valet — FXUSDCAD",
       "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
