@@ -11,25 +11,48 @@
  * weekends and holidays."
  *
  * GitHub's `schedule:` cron is UTC-only and has no concept of daylight
- * saving time or holiday calendars. So we cron *more often than we need*
- * — twice a day at 13:30 UTC and 14:30 UTC, which between them cover
- * 09:30 America/New_York during EDT (UTC-4) and EST (UTC-5) — and then
- * gate the actual work behind this guard. The guard only allows the run
- * when:
+ * saving time or holiday calendars, AND scheduled workflows are best-
+ * effort: GitHub explicitly warns they may be delayed during periods of
+ * high load — sometimes by 30+ minutes. We have observed the 13:30 UTC
+ * cron firing at 15:42 UTC (~11:42 ET). Earlier versions of this guard
+ * required local Eastern time to be within +/- 15 minutes of 09:30,
+ * which silently dropped delayed runs and meant data did not refresh
+ * for an entire day.
  *
- *   1. local America/New_York time is exactly 09 hours 30 minutes
- *      (within a small +/- minute tolerance for cron drift), AND
- *   2. it is Monday–Friday in that timezone, AND
- *   3. the date is not on the configured market-holiday list.
+ * New behavior — "first eligible run wins"
+ * ----------------------------------------
+ * Interpret the user's intent as "run at or after 09:30 Eastern,
+ * whenever GitHub actually starts the workflow on an eligible business
+ * day." Concretely the guard now allows a scheduled run when ALL of:
  *
- * Manual `workflow_dispatch` runs always bypass this guard — see the
- * workflow YAML. This script is only invoked on `schedule` events.
+ *   1. local America/New_York date is Mon–Fri
+ *   2. local America/New_York date is not on the market-holiday list
+ *   3. local time is at or after 09:30 ET and before a reasonable cutoff
+ *      (16:30 ET by default — i.e. before the U.S. market close, after
+ *      which a "today's open" data refresh no longer makes sense), AND
+ *   4. data/copper-signal.json has NOT already been refreshed for the
+ *      same local ET date at/after 09:30 ET.
  *
- * The holiday calendar is a transparent "U.S. equity / CME-style market
- * holiday" list — see HOLIDAYS_2026 / HOLIDAYS_2027 below. The user did
- * not specify Canadian vs U.S. holidays; we picked U.S. market holidays
- * because the underlying live source (Yahoo Finance HG=F = COMEX High
- * Grade Copper futures) is a U.S. CME-traded instrument, and CME copper
+ * Rule (4) is what dedupes the two UTC cron entries (`30 13` and
+ * `30 14`) and any GitHub-delayed duplicate firings: the first one
+ * through on a given ET business day refreshes the file; subsequent
+ * scheduled invocations the same ET day see a fresh `generated_at`
+ * and skip with "already refreshed today". A `generated_at` from an
+ * earlier ET date — or from the same ET date but BEFORE 09:30 (e.g.
+ * a manual midnight refresh) — does not count as "already refreshed"
+ * and the scheduled run is allowed to proceed.
+ *
+ * Manual `workflow_dispatch` runs always bypass this guard at the
+ * workflow level — see the workflow YAML. This script is only invoked
+ * on `schedule` events.
+ *
+ * Holiday calendar
+ * ----------------
+ * Transparent "U.S. equity / CME-style market holiday" list — see
+ * HOLIDAYS_2026 / HOLIDAYS_2027 below. The user did not specify
+ * Canadian vs U.S. holidays; we picked U.S. market holidays because
+ * the underlying live source (Yahoo Finance HG=F = COMEX High Grade
+ * Copper futures) is a U.S. CME-traded instrument, and CME copper
  * follows the U.S. market-holiday calendar. Easy to swap to Canadian
  * statutory holidays later by editing the HOLIDAYS_* tables.
  *
@@ -43,14 +66,17 @@
  *
  * Test mode
  * ---------
- * For unit testing, this module also exports `decide({ now, tz, holidays })`
- * which takes an explicit Date and returns a structured decision object
- * with `run`, `reason`, and the local-time fields it inspected. See
- * scripts/test-schedule-guard.mjs.
+ * For unit testing, this module also exports
+ * `decide({ now, tz, holidays, lastGeneratedAt, ... })` which takes
+ * an explicit Date and an optional last-refresh ISO string and
+ * returns a structured decision object with `run`, `reason`, and the
+ * local-time fields it inspected. See scripts/test-schedule-guard.mjs.
  */
 /* eslint-disable no-console */
 
-import { writeFileSync, appendFileSync, existsSync } from "node:fs";
+import { writeFileSync, appendFileSync, existsSync, readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ---- Holiday calendars --------------------------------------------------
 // U.S. equity / CME-style market holidays. ISO date strings (YYYY-MM-DD)
@@ -133,14 +159,22 @@ export function localFields(now, tz) {
  * Returns `{ run: boolean, reason: string, local: {...} }`.
  *
  * Options:
- *   now         Date — the moment to evaluate (defaults to new Date()).
- *   tz          IANA timezone — defaults to "America/New_York".
- *   holidays    Array<string> of YYYY-MM-DD — defaults to DEFAULT_HOLIDAYS.
- *   targetHour  number — defaults to 9.
- *   targetMin   number — defaults to 30.
- *   toleranceMin number — defaults to 15. GitHub Actions schedules can
- *               drift by 5–20+ minutes under load, so we accept any run
- *               whose local time is within +/- toleranceMin of 09:30.
+ *   now              Date — the moment to evaluate (defaults to new Date()).
+ *   tz               IANA timezone — defaults to "America/New_York".
+ *   holidays         Array<string> of YYYY-MM-DD — defaults to DEFAULT_HOLIDAYS.
+ *   targetHour       number — defaults to 9. Earliest local hour eligible.
+ *   targetMin        number — defaults to 30. Earliest local minute eligible.
+ *   cutoffHour       number — defaults to 16. Latest local hour eligible (exclusive of cutoffMin).
+ *   cutoffMin        number — defaults to 30. Latest local minute eligible.
+ *                    Together (cutoffHour:cutoffMin) form the half-open
+ *                    upper bound: local time must be strictly < cutoff.
+ *                    Default 16:30 ET ≈ 30 min after U.S. equity close.
+ *   lastGeneratedAt  string|null — ISO timestamp of the previous refresh.
+ *                    If it falls on the same ET date AND at/after 09:30 ET,
+ *                    the run is skipped as "already refreshed today" so the
+ *                    second cron entry (and any delayed duplicate) is a
+ *                    no-op. Pass null/undefined to indicate "no prior
+ *                    refresh on file".
  */
 export function decide({
   now = new Date(),
@@ -148,7 +182,9 @@ export function decide({
   holidays = DEFAULT_HOLIDAYS,
   targetHour = 9,
   targetMin = 30,
-  toleranceMin = 15,
+  cutoffHour = 16,
+  cutoffMin = 30,
+  lastGeneratedAt = null,
 } = {}) {
   const local = localFields(now, tz);
 
@@ -162,27 +198,78 @@ export function decide({
     return { run: false, reason: `market holiday (${local.date})`, local };
   }
 
-  // 3. Time window?
+  // 3. Time window — must be at/after 09:30 ET and strictly before the
+  //    cutoff (default 16:30 ET).
   const localMinutes = local.hour * 60 + local.minute;
   const targetMinutes = targetHour * 60 + targetMin;
-  const drift = Math.abs(localMinutes - targetMinutes);
-  if (drift > toleranceMin) {
+  const cutoffMinutes = cutoffHour * 60 + cutoffMin;
+  if (localMinutes < targetMinutes) {
     return {
       run: false,
-      reason: `outside 09:30 ${tz} window (local ${pad(local.hour)}:${pad(local.minute)}, drift ${drift}m)`,
+      reason: `before ${pad(targetHour)}:${pad(targetMin)} ${tz} (local ${pad(local.hour)}:${pad(local.minute)})`,
+      local,
+    };
+  }
+  if (localMinutes >= cutoffMinutes) {
+    return {
+      run: false,
+      reason: `after ${pad(cutoffHour)}:${pad(cutoffMin)} ${tz} cutoff (local ${pad(local.hour)}:${pad(local.minute)})`,
       local,
     };
   }
 
+  // 4. Already-refreshed-today dedupe. If the data file already has a
+  //    `generated_at` whose local ET date matches today's local ET date
+  //    AND that timestamp's local time is >= 09:30 ET, skip — the first
+  //    eligible run already landed. A pre-09:30 same-day timestamp does
+  //    NOT block (e.g. a manual midnight refresh shouldn't suppress the
+  //    real 09:30 scheduled run).
+  if (lastGeneratedAt) {
+    const lastDate = new Date(lastGeneratedAt);
+    if (!Number.isNaN(lastDate.getTime())) {
+      const lastLocal = localFields(lastDate, tz);
+      const lastMinutes = lastLocal.hour * 60 + lastLocal.minute;
+      if (lastLocal.date === local.date && lastMinutes >= targetMinutes) {
+        return {
+          run: false,
+          reason: `already refreshed ${local.date} at ${pad(lastLocal.hour)}:${pad(lastLocal.minute)} ${tz}`,
+          local,
+        };
+      }
+    }
+  }
+
   return {
     run: true,
-    reason: `within 09:30 ${tz} window (local ${pad(local.hour)}:${pad(local.minute)})`,
+    reason: `eligible run for ${local.date} (local ${pad(local.hour)}:${pad(local.minute)} ${tz})`,
     local,
   };
 }
 
 function pad(n) {
   return String(n).padStart(2, "0");
+}
+
+// ---- CLI helpers --------------------------------------------------------
+
+/**
+ * Read `data/copper-signal.json` (relative to the repo root) and return
+ * its `generated_at` string, or null if missing/unreadable. Errors are
+ * swallowed: the guard should never fail the workflow on a missing or
+ * corrupt data file — it just falls back to "no prior refresh".
+ */
+export function readLastGeneratedAt(path) {
+  try {
+    if (!existsSync(path)) return null;
+    const raw = readFileSync(path, "utf8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.generated_at === "string") {
+      return parsed.generated_at;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ---- CLI entry point ----------------------------------------------------
@@ -202,12 +289,21 @@ function isMain() {
 
 if (isMain()) {
   const tz = process.env.SCHEDULE_TZ || "America/New_York";
-  const decision = decide({ tz });
+  // Resolve `data/copper-signal.json` relative to the repo root (this
+  // file lives in scripts/ so the repo root is one level up).
+  const here = dirname(fileURLToPath(import.meta.url));
+  const dataPath = process.env.SCHEDULE_GUARD_DATA_FILE
+    || resolve(here, "..", "data", "copper-signal.json");
+  const lastGeneratedAt = readLastGeneratedAt(dataPath);
+
+  const decision = decide({ tz, lastGeneratedAt });
 
   console.log(`Schedule guard: ${decision.run ? "RUN" : "SKIP"} — ${decision.reason}`);
   console.log(
     `  local: ${decision.local.date} ${pad(decision.local.hour)}:${pad(decision.local.minute)} (weekday=${decision.local.weekday}, tz=${tz})`,
   );
+  console.log(`  data file: ${dataPath}`);
+  console.log(`  last generated_at: ${lastGeneratedAt ?? "(none)"}`);
   console.log(`RUN=${decision.run ? "true" : "false"}`);
 
   // GitHub Actions step output.

@@ -197,20 +197,45 @@ hardcoded HTML values remain, so the page always renders.
 ### Update cadence
 
 - **GitHub Actions workflow:** `.github/workflows/update-copper-data.yml`
-  runs every weekday at **09:30 America/New_York** (Eastern Time),
-  excluding weekends and U.S. market holidays. Manual `workflow_dispatch`
-  is also available and **always bypasses** the schedule guard, so a
-  human-initiated rerun is never blocked. The job runs
-  `node scripts/update-copper-data.mjs`, which reads the JSON, optionally
-  pulls fresh source values, recomputes deltas and spread, and writes the
-  file back. The workflow commits the file only if something changed.
+  runs once per eligible business day, targeting **09:30 America/New_York**
+  (Eastern Time), excluding weekends and U.S. market holidays. Manual
+  `workflow_dispatch` is also available and **always bypasses** the
+  schedule guard, so a human-initiated rerun is never blocked. The job
+  runs `node scripts/update-copper-data.mjs`, which reads the JSON,
+  optionally pulls fresh source values, recomputes deltas and spread,
+  and writes the file back. The workflow commits the file only if
+  something changed.
 
   GitHub's `schedule:` cron is UTC-only with no DST or holiday awareness,
-  so the workflow registers two cron entries — `30 13 * * 1-5` and
-  `30 14 * * 1-5` — and `scripts/schedule-guard.mjs` gates the run on
-  the actual local Eastern time + weekday + market-holiday calendar.
-  Between EDT (UTC-4) and EST (UTC-5), exactly one of those two crons
-  hits 09:30 ET on any given weekday; the other is skipped by the guard.
+  **and scheduled workflows are best-effort: GitHub explicitly warns they
+  may be delayed during periods of high load** (we have observed delays
+  of 30+ minutes; e.g. May 7 fired at 15:42 UTC ≈ 11:42 ET instead of
+  the requested 13:30 UTC). The previous `+/- 15 minutes of 09:30 ET`
+  guard silently dropped those delayed runs and the data did not refresh
+  for the day.
+
+  The current `scripts/schedule-guard.mjs` interprets user intent as
+  *"run at or after 09:30 ET, whenever GitHub actually starts the
+  workflow on an eligible business day, but only once per day."* The
+  workflow registers two cron entries — `30 13 * * 1-5` and
+  `30 14 * * 1-5` — so that one of them lands close to 09:30 ET in EDT
+  and the other in EST, and the guard then chooses the **first eligible
+  run** on each ET business day:
+
+  1. local ET date is Mon–Fri
+  2. local ET date is not on the market-holiday list
+  3. local time is at or after 09:30 ET and strictly before the 16:30
+     ET cutoff (≈ 30 min after the U.S. equity close — past which a
+     "today's open" refresh no longer makes sense)
+  4. `data/copper-signal.json` `generated_at` is NOT already on the same
+     ET date at/after 09:30 ET
+
+  Rule (4) is what dedupes the second cron entry and any GitHub-delayed
+  duplicate firing: the first eligible run of the day refreshes the
+  file, subsequent scheduled invocations the same ET day SKIP with
+  reason `already refreshed YYYY-MM-DD at HH:MM`. A pre-09:30 same-day
+  timestamp (e.g. a manual midnight refresh) does **not** count as
+  "already refreshed" and the scheduled job is allowed to proceed.
 
   The guard's holiday calendar is a transparent **U.S. equity / CME-style
   market-holiday list** (defined in `scripts/schedule-guard.mjs` as
@@ -223,8 +248,14 @@ hardcoded HTML values remain, so the page always renders.
   edit those tables in `schedule-guard.mjs` and update this paragraph.
 
   Guard logic is unit-tested in `scripts/test-schedule-guard.mjs` —
-  scenarios cover EDT vs EST, weekend skips, holiday skips, drift
-  tolerance, and an `America/Toronto` cross-check. Run with:
+  scenarios cover exact 09:30 in EDT and EST, before-09:30 SKIP,
+  after-16:30 cutoff SKIP, weekend and holiday skips, custom holiday
+  override, the May-7 delayed-firing regression (11:42 ET delayed run
+  with previous-day `generated_at` → RUN), the same-day duplicate dedupe
+  (already refreshed at 11:42 ET → second delayed run SKIPs), the
+  steady-state two-cron dedupe in both EDT and EST, the pre-09:30
+  same-day timestamp pass-through, null/garbage `generated_at` cold
+  starts, and an `America/Toronto` cross-check. Run with:
 
   ```bash
   node scripts/test-schedule-guard.mjs
