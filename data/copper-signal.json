@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-07T16:11:21.291Z",
-  "last_updated": "2026-05-07",
-  "last_checked": "2026-05-07T16:11:21.291Z",
+  "generated_at": "2026-05-08T15:07:56.941Z",
+  "last_updated": "2026-05-08",
+  "last_checked": "2026-05-08T15:07:56.941Z",
   "copper": {
     "reference_price_usd_per_lb": 6.191,
     "as_of_date": "2026-05-07",
@@ -147,6 +147,6 @@
     "bare_bright": "manual",
     "insulated_wire": "manual",
     "fx_usd_cad": "bank-of-canada",
-    "notes": "Live fetch attempted via Yahoo Finance HG=F and Bank of Canada Valet (FXUSDCAD). Scrap reference values are manual by design — see scripts/update-copper-data.mjs header for rationale."
+    "notes": "Timestamps only. Set FETCH_SOURCES=1 to attempt live copper + FX fetch. Scrap values stay manual."
   }
 }
