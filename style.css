@@ -633,10 +633,16 @@ p { color: var(--color-text-muted); }
   color: var(--color-copper);
 }
 
-/* === Arched dial === */
+/* === Oval gradient dial =================================================
+   The gauge is a low, wide ellipse (rx=140, ry=42) instead of a half-circle.
+   The score path is rendered as a single continuous linear-gradient stroke,
+   with thin overlay divider lines at the band thresholds. The needle is a
+   stylized elongated triangle drawn as a single <polygon> so it rotates
+   crisply. All band colors come from --color-warning / --color-copper* /
+   --color-success so light/dark themes propagate without JS. */
 .dial-wrap {
   position: relative;
-  max-width: 30rem;
+  max-width: 32rem;
   margin: var(--space-3) auto var(--space-6);
   padding-top: var(--space-2);
   padding-bottom: var(--space-2);
@@ -646,6 +652,8 @@ p { color: var(--color-text-muted); }
   display: block;
   width: 100%;
   height: auto;
+  /* Allow the needle's drop-shadow to extend beyond the viewBox a little. */
+  overflow: visible;
 }
 
 .dial-track {
@@ -655,32 +663,38 @@ p { color: var(--color-text-muted); }
   stroke-linecap: butt;
 }
 
-/* Banded segments: each path covers a different score-band slice of the arc via
-   stroke-dasharray. Set by app.js from signal.bands so band edges follow the JSON. */
-.dial-band {
+/* Gradient stops driven by theme variables. Setting via CSS (instead of
+   stop-color="var(--...)") is the path that works reliably across browsers.
+   Stops correspond to the score thresholds documented in index.html. */
+.dial-stop-watch-a { stop-color: var(--color-warning); stop-opacity: 1; }
+.dial-stop-watch-b { stop-color: var(--color-warning); stop-opacity: 0.92; }
+.dial-stop-good    { stop-color: var(--color-copper-light); stop-opacity: 1; }
+.dial-stop-strong  { stop-color: var(--color-copper); stop-opacity: 1; }
+.dial-stop-exc-a   { stop-color: var(--color-copper-bright); stop-opacity: 1; }
+.dial-stop-exc-b   { stop-color: var(--color-success); stop-opacity: 1; }
+.dial-stop-exc-c   { stop-color: var(--color-success); stop-opacity: 1; }
+
+/* Continuous score-path stroke painted with the linear gradient. */
+.dial-gradient-arc {
   fill: none;
+  stroke: url(#dial-gradient);
   stroke-width: 22;
   stroke-linecap: butt;
-  transition: stroke-dasharray 240ms ease-out;
+  filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--color-copper-deep) 24%, transparent));
 }
-.dial-band.band-good {
-  stroke: var(--color-warning);
+
+/* Faint divider lines layered on the gradient so the band thresholds remain
+   visually scannable. Lines run across the stroke (radial), not along it,
+   and use a contrast-aware tone so they read in both themes. */
+.dial-dividers line {
+  stroke: color-mix(in srgb, var(--color-bg) 78%, var(--color-text) 22%);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.85;
 }
-.dial-band.band-strong {
-  stroke: var(--color-copper);
-  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--color-copper-deep) 28%, transparent));
-}
-.dial-band.band-exceptional {
-  stroke: var(--color-success);
-}
-/* Default: every band is at full opacity so the fallback (no-JS) gauge stays
-   legible. Once app.js classifies the active band it marks the other two with
-   .is-dim so the eye snaps to the current band without losing the thresholds. */
-.dial-band {
-  opacity: 1;
-}
-.dial-band.is-dim {
-  opacity: 0.4;
+[data-theme='light'] .dial-dividers line {
+  stroke: color-mix(in srgb, var(--color-bg) 60%, var(--color-text) 40%);
+  opacity: 0.6;
 }
 
 .dial-ticks line {
@@ -704,17 +718,27 @@ p { color: var(--color-text-muted); }
   fill: var(--color-text);
 }
 
-.dial-needle line {
-  stroke: var(--color-text);
-  stroke-width: 4;
-  stroke-linecap: round;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+/* Stylized elongated triangle needle. The polygon is drawn with the tip
+   pointing at the current score on the gradient path; the wide base sits
+   on the hub. A thin stroke + drop-shadow keeps the triangle crisp on top
+   of the gradient regardless of which band it's pointing at. */
+.dial-needle-tri {
+  fill: var(--color-text);
+  stroke: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  stroke-width: 0.75;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.32));
+  transition: points 240ms ease-out;
+}
+[data-theme='light'] .dial-needle-tri {
+  fill: var(--color-text);
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.18));
 }
 
 .dial-hub {
   fill: var(--color-charcoal);
   stroke: var(--color-copper-bright);
-  stroke-width: 2.5;
+  stroke-width: 2;
 }
 
 [data-theme='light'] .dial-hub {
@@ -728,7 +752,10 @@ p { color: var(--color-text-muted); }
 .dial-readout {
   display: flex;
   justify-content: center;
-  margin-top: calc(-1 * var(--space-6));
+  /* The oval gauge is shorter than the half-circle was, so the readout pill
+     sits closer to the gauge with a smaller negative pull. Keeping it in
+     normal flow guarantees the band legend below never collides. */
+  margin-top: calc(-1 * var(--space-3));
   position: relative;
   z-index: 1;
 }
@@ -793,11 +820,22 @@ p { color: var(--color-text-muted); }
   letter-spacing: 0.06em;
 }
 
-/* Band-aware variants: hold = amber, good/strong/exceptional = green by default. */
+/* Band-aware variants:
+     verify (< 60)   = amber, conservative — "Verify conditions"
+     watch  (60–77) = amber, conservative — "Watch & review economics"
+     good   (78–84) = amber
+     strong (85–91) = copper
+     exceptional (92+) = green (default green styling above)
+   verify and watch share the same amber treatment so both sub-78 categories
+   read as "not yet a buy" without using the discouraged "Wait" language. */
+.buy-light.band-verify,
+.buy-light.band-watch,
 .buy-light.band-hold {
   background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
   border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
 }
+.buy-light.band-verify .buy-light-dot,
+.buy-light.band-watch .buy-light-dot,
 .buy-light.band-hold .buy-light-dot {
   background: radial-gradient(
     circle at 35% 30%,
@@ -807,6 +845,8 @@ p { color: var(--color-text-muted); }
   );
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent);
 }
+.buy-light.band-verify .buy-light-score,
+.buy-light.band-watch .buy-light-score,
 .buy-light.band-hold .buy-light-score {
   border-left-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
 }
@@ -903,6 +943,11 @@ p { color: var(--color-text-muted); }
   height: 0.55rem;
   border-radius: 999px;
   flex-shrink: 0;
+}
+.dial-band-key.band-verify .dial-band-key-dot,
+.dial-band-key.band-watch .dial-band-key-dot {
+  background: color-mix(in srgb, var(--color-warning) 78%, var(--color-text-faint));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-warning) 18%, transparent);
 }
 .dial-band-key.band-good .dial-band-key-dot {
   background: var(--color-warning);

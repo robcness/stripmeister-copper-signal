@@ -122,10 +122,16 @@ function clamp(n, lo, hi) {
 /**
  * Return the band metadata for a numeric score.
  * Bands are exclusive between tiers per product owner spec:
+ *   <60    Verify conditions          (rarely seen — published score is floored at 60)
+ *   60–77  Watch & review economics   (conservative, non-buying)
  *   78–84  Good time to buy
  *   85–91  Strong buying window
  *   92+    Exceptional recovery window
- *   <78    Hold / monitor   (we never publish below 60 in practice)
+ *
+ * Language note: the product owner asked us to AVOID 'Wait' / 'Hold'-style
+ * language. 'Verify conditions' replaces the legacy 'Hold / monitor' label
+ * at the very bottom; 'Watch & review economics' covers the 60–77 band as
+ * an intermediate conservative, non-buying state.
  */
 export function bandForScore(score) {
   if (typeof score !== 'number' || !Number.isFinite(score)) {
@@ -167,13 +173,24 @@ export function bandForScore(score) {
         'If you have wire on hand, run the recovery math now. Reference signal — not financial advice.',
     };
   }
+  if (score >= 60) {
+    return {
+      id: 'watch',
+      label: 'Watch & review economics',
+      headline: 'Watch and review economics',
+      summary:
+        'Copper momentum is soft. The recovery math is less compelling at current reference rates — ' +
+        'review your inventory economics and check your local yard before committing volume. ' +
+        'Reference signal — not financial advice.',
+    };
+  }
   return {
-    id: 'hold',
-    label: 'Hold / monitor',
-    headline: 'Hold and monitor',
+    id: 'verify',
+    label: 'Verify conditions',
+    headline: 'Verify conditions',
     summary:
-      'Copper momentum is soft. The recovery math is less compelling at current reference rates — ' +
-      'check your local yard before committing volume. Reference signal — not financial advice.',
+      'Copper momentum is unusually weak. Verify the current reference price and your local yard quote ' +
+      'before committing volume. Reference signal — not financial advice.',
   };
 }
 

@@ -511,6 +511,10 @@ async function main() {
     summary: scoreResult.band.summary,
     band: scoreResult.band.id,
     bands: {
+      // 'verify' covers < 60. We publish it for completeness and screen
+      // readers even though the score is floored at 60 in practice.
+      verify: { min: 0, max: 59, label: 'Verify conditions' },
+      watch: { min: 60, max: 77, label: 'Watch & review economics' },
       good: { min: 78, max: 84, label: 'Good time to buy' },
       strong: { min: 85, max: 91, label: 'Strong buying window' },
       exceptional: { min: 92, max: 99, label: 'Exceptional recovery window' },

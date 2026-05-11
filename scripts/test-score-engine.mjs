@@ -12,10 +12,13 @@
  *     conservative" calibration the user asked for.
  *   - Each component respects its cap (no single axis can dominate).
  *   - Score bands map exactly to the product-owner spec:
+ *       <60   → Verify conditions          (rarely seen — score is floored at 60)
+ *       60–77 → Watch & review economics
  *       78–84 → Good time to buy
  *       85–91 → Strong buying window
  *       92+   → Exceptional recovery window
- *   - Sub-78 lands in the Hold / monitor band with a non-hype summary.
+ *   - Sub-60 lands in the Verify-conditions band; 60–77 lands in Watch
+ *     & review economics, both with non-hype summaries.
  *   - Hard floor 60 / hard ceiling 99 (we never publish 100/100 or 0/100).
  *   - scoreDrivers() returns top-2 by absolute magnitude, skipping base.
  *   - Strong-positive market produces a score in the 85–91 band when
@@ -96,16 +99,27 @@ header("Scenario 3: Daily-move sensitivity ladder");
 // ---------- Scenario 4: Score band boundaries ---------------------------
 header("Scenario 4: Score band boundaries exact to user spec");
 {
-  check("77 → hold",         bandForScore(77).id,  "hold");
+  check("59 → verify",       bandForScore(59).id,  "verify");
+  check("60 → watch",        bandForScore(60).id,  "watch");
+  check("77 → watch",        bandForScore(77).id,  "watch");
   check("78 → good",         bandForScore(78).id,  "good");
   check("84 → good",         bandForScore(84).id,  "good");
   check("85 → strong",       bandForScore(85).id,  "strong");
   check("91 → strong",       bandForScore(91).id,  "strong");
   check("92 → exceptional",  bandForScore(92).id,  "exceptional");
   check("99 → exceptional",  bandForScore(99).id,  "exceptional");
+  check("verify label",      bandForScore(50).label, "Verify conditions");
+  check("watch label",       bandForScore(70).label, "Watch & review economics");
   check("good label",        bandForScore(80).label, "Good time to buy");
   check("strong label",      bandForScore(88).label, "Strong buying window");
   check("exceptional label", bandForScore(94).label, "Exceptional recovery window");
+  // The discouraged 'Wait' and 'Hold' wording must not appear in any band label.
+  ['Wait', 'Hold', 'hold'].forEach((banned) => {
+    [50, 60, 70, 78, 85, 92, 99].forEach((s) => {
+      const lbl = bandForScore(s).label;
+      check(`${s} label has no "${banned}"`, lbl.includes(banned), false);
+    });
+  });
 }
 
 // ---------- Scenario 5: No-hype guarantee in summaries ------------------
@@ -113,16 +127,25 @@ header("Scenario 4: Score band boundaries exact to user spec");
 header("Scenario 5: Summaries contain no hype or guarantees");
 {
   const banned = /(guarantee|guaranteed|sure thing|easy money|risk-free|rich|moonshot|to the moon|locked in)/i;
-  const goodSum = bandForScore(80).summary;
+  const goodSum   = bandForScore(80).summary;
   const strongSum = bandForScore(88).summary;
-  const excSum = bandForScore(94).summary;
-  const holdSum = bandForScore(60).summary;
-  check("good summary clean",         banned.test(goodSum), false);
-  check("strong summary clean",       banned.test(strongSum), false);
-  check("exceptional summary clean",  banned.test(excSum), false);
-  check("hold summary clean",         banned.test(holdSum), false);
+  const excSum    = bandForScore(94).summary;
+  const watchSum  = bandForScore(70).summary;
+  const verifySum = bandForScore(50).summary;
+  check("good summary clean",          banned.test(goodSum), false);
+  check("strong summary clean",        banned.test(strongSum), false);
+  check("exceptional summary clean",   banned.test(excSum), false);
+  check("watch summary clean",         banned.test(watchSum), false);
+  check("verify summary clean",        banned.test(verifySum), false);
   check("good cites 'reference signal'", /reference signal|not financial advice/i.test(goodSum), true);
   check("exc cites 'reference signal'",  /reference signal|not financial advice/i.test(excSum), true);
+  check("watch cites 'reference signal'", /reference signal|not financial advice/i.test(watchSum), true);
+  check("verify cites 'reference signal'", /reference signal|not financial advice/i.test(verifySum), true);
+  // The discouraged 'Wait' verb must not appear in any summary either.
+  [50, 60, 70, 78, 85, 92, 99].forEach((s) => {
+    const sum = bandForScore(s).summary;
+    check(`${s} summary avoids "Wait"`, /\bWait\b/.test(sum), false);
+  });
 }
 
 // ---------- Scenario 6: Component caps respected ------------------------
@@ -152,7 +175,8 @@ header("Scenario 7: Score floor at SCORE_MIN — extreme negative shock");
   const bad = computeScore({ d1_pct: -100, d5_pct: -100, d30_pct: -100, d5y_pct: -100, strip_usd_lb: -100 });
   check("score at maximum negative shock", bad.score, 62);
   check("SCORE_MIN constant = 60", SCORE_MIN, 60);
-  check("band = hold", bad.band.id, "hold");
+  // Score 62 is in the 60–77 'watch' band under the new spec.
+  check("band = watch", bad.band.id, "watch");
 }
 
 // ---------- Scenario 8: A real-world strong market lands in strong band -
@@ -169,11 +193,11 @@ header("Scenario 8: Strong-but-credible market → strong band");
   checkInRange("score in strong-or-exceptional", r.score, 85, 99);
 }
 
-// ---------- Scenario 9: Real-world weak market → hold ------------------
-header("Scenario 9: Weak market → hold band");
+// ---------- Scenario 9: Real-world weak market → watch -----------------
+header("Scenario 9: Weak market → watch band");
 {
   const r = computeScore({ d1_pct: -2, d5_pct: -4, d30_pct: -8, d5y_pct: -5, strip_usd_lb: 0 });
-  check("band = hold", r.band.id, "hold");
+  check("band = watch", r.band.id, "watch");
   checkInRange("score <= 77", r.score, SCORE_MIN, 77);
 }
 
