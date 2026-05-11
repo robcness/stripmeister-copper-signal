@@ -93,6 +93,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { computeScore, scoreDrivers, bandForScore } from './score-engine.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -352,6 +353,13 @@ async function main() {
   let delta30 = data?.copper?.delta_30d_pct ?? null;
   let delta12 = null;
   let delta5 = null;
+  // Short-horizon momentum (1d, 5d). Default: keep existing.
+  let delta1d = data?.copper?.delta_1d_pct ?? null;
+  let delta5d = data?.copper?.delta_5d_pct ?? null;
+  let close1d = data?.copper?.history?.d1?.close ?? null;
+  let close1dDate = data?.copper?.history?.d1?.date ?? null;
+  let close5d = data?.copper?.history?.d5?.close ?? null;
+  let close5dDate = data?.copper?.history?.d5?.date ?? null;
 
   if (fetchSources) {
     // FX fetch from Bank of Canada (independent of copper fetch).
@@ -385,12 +393,29 @@ async function main() {
       delta12 = pct(copperPrice, close1y);
       delta5 = pct(copperPrice, close5y);
 
+      // 1-day (prior trading day) and 5-day (5 trading sessions back)
+      // momentum. The rows array is already in ascending order, last row
+      // is `latest`. Index from the end.
+      const rows = y.rows || [];
+      const prev1Row = rows.length >= 2 ? rows[rows.length - 2] : null;
+      const prev5Row = rows.length >= 6 ? rows[rows.length - 6] : null;
+      const c1 = prev1Row?.close ?? null;
+      const c5 = prev5Row?.close ?? null;
+      delta1d = pct(copperPrice, c1);
+      delta5d = pct(copperPrice, c5);
+      close1d = c1;
+      close1dDate = prev1Row?.date ?? null;
+      close5d = c5;
+      close5dDate = prev5Row?.date ?? null;
+
       // Snapshot the anchor closes alongside the calculation so the front-end
       // methodology block can show the math. We use generic keys here so we
       // don't collide with the prototype's date-stamped keys in older JSON.
       history = {
         ...history,
         latest: { date: y.latestDateIso, close: round(copperPrice, 4) },
+        d1: c1 != null ? { date: close1dDate, close: round(c1, 4) } : null,
+        d5: c5 != null ? { date: close5dDate, close: round(c5, 4) } : null,
         d30: close30 != null ? { date: target30, close: round(close30, 4) } : null,
         y1: close1y != null ? { date: target1y, close: round(close1y, 4) } : null,
         y5: close5y != null ? { date: target5y, close: round(close5y, 4) } : null,
@@ -439,6 +464,63 @@ async function main() {
       ? Math.round(stripDelta * unitLbs)
       : (data?.scrap?.spread_per_50lb_usd ?? null);
 
+  // --- Since-last-refresh delta -----------------------------------------
+  // Capture the previous run's reference price BEFORE we overwrite it, so
+  // the dashboard can show "copper moved $X since the last refresh". This
+  // is independent of the 1-day Yahoo delta (which is close-to-close); the
+  // since-last-refresh delta is run-to-run and may equal zero on a
+  // FETCH_SOURCES=0 timestamp-only refresh.
+  const prevPrice = data?.copper?.reference_price_usd_per_lb ?? null;
+  const prevGeneratedAt = data?.generated_at ?? null;
+  const sinceLastDeltaUsd =
+    typeof copperPrice === 'number' && typeof prevPrice === 'number'
+      ? round(copperPrice - prevPrice, 4)
+      : null;
+  const sinceLastDeltaPct =
+    typeof copperPrice === 'number' && typeof prevPrice === 'number' && prevPrice !== 0
+      ? round(((copperPrice - prevPrice) / prevPrice) * 100, 2)
+      : null;
+
+  // --- Score (momentum-sensitive, conservative) -------------------------
+  // We feed % deltas (unit-free) and the USD/lb strip delta into the
+  // score engine. CAD/lb is purely display; the score itself is
+  // dimensionless. Components are clipped per-axis inside the engine.
+  const previousScore = data?.signal?.score ?? null;
+  const scoreResult = computeScore({
+    d1_pct: delta1d,
+    d5_pct: delta5d,
+    d30_pct: delta30,
+    d5y_pct: delta5,
+    strip_usd_lb: typeof stripDelta === 'number' ? stripDelta : null,
+  });
+  const drivers = scoreDrivers(scoreResult.components, 2);
+  const scoreDelta =
+    typeof previousScore === 'number' ? scoreResult.score - previousScore : null;
+
+  // --- Signal object (band + summary + drivers) --------------------------
+  const existingSignal = data?.signal || {};
+  const nextSignal = {
+    ...existingSignal,
+    score: scoreResult.score,
+    score_max: existingSignal.score_max ?? 100,
+    score_min_published: 60,
+    previous_score: previousScore,
+    score_delta: scoreDelta,
+    label: scoreResult.band.label,
+    headline: scoreResult.band.headline,
+    summary: scoreResult.band.summary,
+    band: scoreResult.band.id,
+    bands: {
+      good: { min: 78, max: 84, label: 'Good time to buy' },
+      strong: { min: 85, max: 91, label: 'Strong buying window' },
+      exceptional: { min: 92, max: 99, label: 'Exceptional recovery window' },
+    },
+    components: scoreResult.components,
+    drivers,
+    weights_note:
+      'Score = 80 base + daily (±4) + 5-day (±5) + 30-day (±5) + 5-year context (-2 to +3) + strip spread (±2). Conservative caps. Reference signal, not financial advice.',
+  };
+
   // --- Write back --------------------------------------------------------
   const next = {
     ...data,
@@ -449,11 +531,22 @@ async function main() {
       ...data.copper,
       reference_price_usd_per_lb: copperPrice,
       as_of_date: asOfDate,
+      delta_1d_pct: delta1d !== null ? round(delta1d, 2) : (data?.copper?.delta_1d_pct ?? null),
+      delta_5d_pct: delta5d !== null ? round(delta5d, 2) : (data?.copper?.delta_5d_pct ?? null),
       delta_30d_pct: delta30 !== null ? round(delta30, 2) : data?.copper?.delta_30d_pct,
       delta_12mo_pct: delta12 !== null ? round(delta12, 2) : data?.copper?.delta_12mo_pct,
       delta_5yr_pct: delta5 !== null ? round(delta5, 2) : data?.copper?.delta_5yr_pct,
+      since_last_refresh: {
+        previous_price_usd_per_lb: typeof prevPrice === 'number' ? round(prevPrice, 4) : null,
+        previous_generated_at: prevGeneratedAt,
+        delta_usd_per_lb: sinceLastDeltaUsd,
+        delta_pct: sinceLastDeltaPct,
+        status: deriveStatus(sinceLastDeltaUsd),
+      },
       history,
       deltas_status: {
+        '1d': deriveStatus(delta1d),
+        '5d': deriveStatus(delta5d),
         '30d': deriveStatus(delta30),
         '12mo': deriveStatus(delta12),
         '5yr': deriveStatus(delta5),
@@ -468,6 +561,7 @@ async function main() {
       spread_per_50lb_usd: spreadPerUnit,
       spread_unit_lbs: unitLbs,
     },
+    signal: nextSignal,
     fx: {
       ...existingFx,
       base_currency: 'USD',
@@ -511,7 +605,11 @@ async function main() {
   console.log('[update-copper-data] bare bright:', bareBright, '(', bareBrightStatus, ')');
   console.log('[update-copper-data] insulated:', insulated, '(', insulatedStatus, ')');
   console.log('[update-copper-data] strip delta:', stripDelta, '/lb');
-  console.log('[update-copper-data] deltas: 30d', delta30, '12mo', delta12, '5yr', delta5);
+  console.log('[update-copper-data] deltas: 1d', delta1d, '5d', delta5d, '30d', delta30, '12mo', delta12, '5yr', delta5);
+  console.log('[update-copper-data] score:', scoreResult.score, '(', scoreResult.band.id, ')', 'prev', previousScore, 'delta', scoreDelta);
+  console.log('[update-copper-data] components:', JSON.stringify(scoreResult.components));
+  console.log('[update-copper-data] drivers:', drivers.map(d => `${d.id}${d.delta >= 0 ? '+' : ''}${d.delta}`).join(', '));
+  console.log('[update-copper-data] since-last-refresh: $', sinceLastDeltaUsd, '/lb (', sinceLastDeltaPct, '%)');
   console.log('[update-copper-data] fx USD→CAD:', fxRate, '(', fxStatus, ')', 'as of', fxAsOf);
 }
 

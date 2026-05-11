@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-11T16:15:27.919Z",
+  "generated_at": "2026-05-11T21:50:18.331Z",
   "last_updated": "2026-05-11",
-  "last_checked": "2026-05-11T16:15:27.919Z",
+  "last_checked": "2026-05-11T21:50:18.331Z",
   "copper": {
     "reference_price_usd_per_lb": 6.191,
     "as_of_date": "2026-05-07",
@@ -31,9 +31,20 @@
       }
     },
     "deltas_status": {
+      "1d": "flat",
+      "5d": "flat",
       "30d": "positive",
       "12mo": "positive",
       "5yr": "positive"
+    },
+    "delta_1d_pct": null,
+    "delta_5d_pct": null,
+    "since_last_refresh": {
+      "previous_price_usd_per_lb": 6.191,
+      "previous_generated_at": "2026-05-11T21:39:10.970Z",
+      "delta_usd_per_lb": 0,
+      "delta_pct": 0,
+      "status": "flat"
     }
   },
   "scrap": {
@@ -45,17 +56,59 @@
     "spread_unit_lbs": 50
   },
   "signal": {
-    "score": 82,
+    "score": 87,
     "score_max": 100,
-    "label": "Good time to buy",
+    "label": "Strong buying window",
     "headline": "Strong recovery window",
-    "summary": "Copper is near a five-year high and still climbing. If you have wire on hand, run the recovery math now.",
+    "summary": "Copper is firm and trending up across multiple horizons. If you have wire on hand, run the recovery math now. Reference signal — not financial advice.",
     "weights": {
       "price_momentum": 0.35,
       "five_year_context": 0.25,
       "recycling_demand_relevance": 0.2,
       "short_term_risk": 0.2
-    }
+    },
+    "score_min_published": 60,
+    "previous_score": 87,
+    "score_delta": 0,
+    "band": "strong",
+    "bands": {
+      "good": {
+        "min": 78,
+        "max": 84,
+        "label": "Good time to buy"
+      },
+      "strong": {
+        "min": 85,
+        "max": 91,
+        "label": "Strong buying window"
+      },
+      "exceptional": {
+        "min": 92,
+        "max": 99,
+        "label": "Exceptional recovery window"
+      }
+    },
+    "components": {
+      "base": 80,
+      "daily": 0,
+      "five_day": 0,
+      "thirty_day": 4,
+      "five_year_context": 2,
+      "strip_spread": 1
+    },
+    "drivers": [
+      {
+        "id": "thirty_day",
+        "label": "30-day copper momentum",
+        "delta": 4
+      },
+      {
+        "id": "five_year_context",
+        "label": "5-year context",
+        "delta": 2
+      }
+    ],
+    "weights_note": "Score = 80 base + daily (±4) + 5-day (±5) + 30-day (±5) + 5-year context (-2 to +3) + strip spread (±2). Conservative caps. Reference signal, not financial advice."
   },
   "sources": {
     "copper_reference": {

@@ -24,7 +24,7 @@
  */
 /* eslint-disable no-console */
 
-import { decide } from "./schedule-guard.mjs";
+import { decide, HOLIDAYS_2026, HOLIDAYS_2027, holidayDetail, HOLIDAY_DETAILS_2026, HOLIDAY_DETAILS_2027 } from "./schedule-guard.mjs";
 
 let passed = 0;
 let failed = 0;
@@ -277,6 +277,123 @@ header("Scenario 18: 13:30 UTC Tue (EST) → 08:30 EST (SKIP, before window)");
   check("local.hour", d.local.hour, 8);
   check("local.minute", d.local.minute, 30);
   check("reason mentions before", /before/.test(d.reason), true);
+}
+
+// ---------- Scenario 19: Canadian-only holiday (Canada Day) -------------
+// Canada Day 2026 is Wednesday July 1. It is NOT a U.S. market holiday
+// (the COMEX HG=F feed is open) but it IS a Canadian federal holiday.
+// The expanded calendar must skip it.
+header("Scenario 19: Canada Day 2026-07-01 (SKIP, Canadian-only holiday)");
+{
+  const d = decide({ now: new Date("2026-07-01T14:00:00Z") }); // 10:00 EDT
+  check("run", d.run, false);
+  check("local.date", d.local.date, "2026-07-01");
+  check("reason mentions holiday", /holiday/.test(d.reason), true);
+  check("reason mentions Canada", /Canada/.test(d.reason), true);
+}
+
+// ---------- Scenario 20: Canadian-only holiday (Victoria Day) -----------
+header("Scenario 20: Victoria Day 2026-05-18 (SKIP, Canadian-only holiday)");
+{
+  const d = decide({ now: new Date("2026-05-18T14:00:00Z") });
+  check("run", d.run, false);
+  check("local.date", d.local.date, "2026-05-18");
+  check("reason mentions Victoria", /Victoria/.test(d.reason), true);
+}
+
+// ---------- Scenario 21: Canadian-only holiday (Remembrance Day) --------
+header("Scenario 21: Remembrance Day 2026-11-11 (SKIP, Canadian-only holiday)");
+{
+  const d = decide({ now: new Date("2026-11-11T15:00:00Z") });
+  check("run", d.run, false);
+  check("local.date", d.local.date, "2026-11-11");
+  check("reason mentions Remembrance", /Remembrance/.test(d.reason), true);
+}
+
+// ---------- Scenario 22: U.S.-only holiday (MLK Day) --------------------
+// MLK Day 2026-01-19 is a U.S. market holiday but not a Canadian federal
+// holiday. Still skipped because the underlying CME feed is closed.
+header("Scenario 22: MLK Day 2026-01-19 (SKIP, US-only holiday)");
+{
+  const d = decide({ now: new Date("2026-01-19T15:00:00Z") });
+  check("run", d.run, false);
+  check("local.date", d.local.date, "2026-01-19");
+  check("reason mentions MLK", /Martin Luther|MLK/.test(d.reason), true);
+  check("reason tagged [us]", /\[us\]/.test(d.reason), true);
+}
+
+// ---------- Scenario 23: Overlap (Labor / Labour Day 2026) --------------
+// One skip is enough; the dedupe pass must collapse to a single entry.
+header("Scenario 23: Labor/Labour Day 2026-09-07 (SKIP, both calendars, dedupe)");
+{
+  const d = decide({ now: new Date("2026-09-07T14:30:00Z") });
+  check("run", d.run, false);
+  check("local.date", d.local.date, "2026-09-07");
+  // Date should appear exactly once in the merged DEFAULT_HOLIDAYS table.
+  const all = [...HOLIDAYS_2026, ...HOLIDAYS_2027];
+  const count = all.filter((x) => x === "2026-09-07").length;
+  check("dedupe count == 1", count, 1);
+}
+
+// ---------- Scenario 24: Civic Holiday (CA-only, Mon 2026-08-03) --------
+header("Scenario 24: Civic Holiday 2026-08-03 (SKIP, Canadian-only)");
+{
+  const d = decide({ now: new Date("2026-08-03T14:00:00Z") });
+  check("run", d.run, false);
+  check("reason mentions Civic", /Civic/.test(d.reason), true);
+}
+
+// ---------- Scenario 25: Boxing Day observed (Mon 2026-12-28) -----------
+header("Scenario 25: Boxing Day observed 2026-12-28 (SKIP, Canadian-only)");
+{
+  const d = decide({ now: new Date("2026-12-28T15:00:00Z") });
+  check("run", d.run, false);
+  check("reason mentions Boxing", /Boxing/.test(d.reason), true);
+}
+
+// ---------- Scenario 26: Canadian Thanksgiving (Mon 2027-10-11) ---------
+// US Thanksgiving falls on the 4th Thursday of November. Canadian
+// Thanksgiving falls on the 2nd Monday of October — a CA-only date.
+header("Scenario 26: Canadian Thanksgiving 2027-10-11 (SKIP, Canadian-only)");
+{
+  const d = decide({ now: new Date("2027-10-11T14:00:00Z") });
+  check("run", d.run, false);
+  check("reason mentions Thanksgiving", /Thanksgiving/.test(d.reason), true);
+  check("reason tagged [ca]", /\[ca\]/.test(d.reason), true);
+}
+
+// ---------- Scenario 27: National Day for Truth & Reconciliation --------
+header("Scenario 27: Truth & Reconciliation 2026-09-30 (SKIP, Canadian-only)");
+{
+  const d = decide({ now: new Date("2026-09-30T14:00:00Z") });
+  check("run", d.run, false);
+  check("reason mentions Truth", /Truth/.test(d.reason), true);
+}
+
+// ---------- Scenario 28: Delayed-run logic still works on a normal day
+// Confirm the May-7 regression test still passes with the expanded
+// holiday table (regression on the regression test).
+header("Scenario 28: Delayed 11:42 ET still RUNs after holiday table expansion");
+{
+  const d = decide({
+    now: new Date("2026-05-07T15:42:00Z"),
+    lastGeneratedAt: "2026-05-06T13:30:00Z",
+  });
+  check("run", d.run, true);
+}
+
+// ---------- Scenario 29: holidayDetail() lookup -------------------------
+header("Scenario 29: holidayDetail() returns name + origin");
+{
+  const a = holidayDetail("2026-07-01");
+  check("canada day name", a?.name, "Canada Day");
+  check("canada day origin", a?.origin, "ca");
+  const b = holidayDetail("2026-01-19");
+  check("MLK Day origin", b?.origin, "us");
+  const c = holidayDetail("2026-01-01");
+  check("New Year's origin both", c?.origin, "both");
+  const d = holidayDetail("2026-06-09");
+  check("non-holiday returns null", d, null);
 }
 
 // ---------- Summary -----------------------------------------------------

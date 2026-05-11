@@ -100,6 +100,21 @@ function setStatus(field, status) {
   });
 }
 
+function showField(field, shown) {
+  document.querySelectorAll(`[data-field="${field}"]`).forEach((el) => {
+    if (shown) el.removeAttribute('hidden');
+    else el.setAttribute('hidden', '');
+  });
+}
+
+function setBandClass(field, band) {
+  if (!band) return;
+  document.querySelectorAll(`[data-field="${field}"]`).forEach((el) => {
+    el.classList.remove('band-hold', 'band-good', 'band-strong', 'band-exceptional');
+    el.classList.add(`band-${band}`);
+  });
+}
+
 // Render the hero summary text with an inline “run the recovery math now”
 // link to the StripMeister scrap calculator. We avoid blanket innerHTML on
 // arbitrary JSON: only the literal phrase “run the recovery math now” (case-
@@ -329,6 +344,63 @@ function render() {
   if (typeof s.spread_unit_lbs === 'number') setText('spread-unit-lbs', s.spread_unit_lbs);
   if (typeof spreadShown === 'number') setText('spread-per-50lb', spreadShown);
 
+  // ---- 1-day / 5-day momentum chips --------------------------------------
+  const delta1d = fmtSignedPct(c.delta_1d_pct, 2);
+  const delta5d = fmtSignedPct(c.delta_5d_pct, 2);
+  if (delta1d) {
+    setText('delta-1d', delta1d);
+    setStatus('delta-1d-chip', statuses['1d'] || deriveStatus(c.delta_1d_pct));
+    showField('delta-1d-chip', true);
+    setText('method-delta-1d', delta1d);
+  } else {
+    showField('delta-1d-chip', false);
+  }
+  if (delta5d) {
+    setText('delta-5d', delta5d);
+    setStatus('delta-5d-chip', statuses['5d'] || deriveStatus(c.delta_5d_pct));
+    showField('delta-5d-chip', true);
+    setText('method-delta-5d', delta5d);
+  } else {
+    showField('delta-5d-chip', false);
+  }
+
+  // ---- Since-last-refresh ribbon ------------------------------------------
+  // Only render when the delta is meaningfully non-zero. A 0.00% / $0.00 ribbon
+  // adds noise without information and feels like clutter.
+  const slr = c.since_last_refresh && typeof c.since_last_refresh === 'object' ? c.since_last_refresh : null;
+  const slrIsMeaningful =
+    slr &&
+    typeof slr.delta_pct === 'number' &&
+    Number.isFinite(slr.delta_pct) &&
+    Math.abs(slr.delta_pct) >= 0.01;
+  if (slrIsMeaningful) {
+    const pct = fmtSignedPct(slr.delta_pct, 2);
+    const dUsdPerLb = typeof slr.delta_usd_per_lb === 'number' ? slr.delta_usd_per_lb : null;
+    const dShown =
+      dUsdPerLb === null
+        ? null
+        : effectiveCurrency === 'CAD'
+        ? convertPerLb(dUsdPerLb, effectiveRate)
+        : dUsdPerLb;
+    const moneyPart =
+      typeof dShown === 'number' && Number.isFinite(dShown)
+        ? `${dShown >= 0 ? '+' : '\u2212'}$${fmtMoney(Math.abs(dShown), 2)} ${unitPerLb}`
+        : null;
+    const prevAt = slr.previous_generated_at ? new Date(slr.previous_generated_at) : null;
+    const prevTxt = prevAt && !Number.isNaN(prevAt.getTime()) ? prevAt.toISOString().slice(0, 10) : null;
+    const parts = [];
+    if (moneyPart) parts.push(moneyPart);
+    parts.push(`${pct} since last refresh`);
+    if (prevTxt) parts.push(`(prior ${prevTxt})`);
+    setText('refresh-meta', parts.join(' \u00b7 '));
+    showField('refresh-meta-wrap', true);
+  } else {
+    showField('refresh-meta-wrap', false);
+  }
+  // The score-delta ribbon is suppressed when score_delta is exactly 0 to keep
+  // the UI quiet during no-op refreshes.
+
+
   // ---- Primary signal -----------------------------------------------------
   const sig = data.signal || {};
   if (typeof sig.score === 'number') setText('signal-score', sig.score);
@@ -336,6 +408,86 @@ function render() {
   if (sig.label) setText('signal-label', sig.label);
   if (sig.headline) setText('signal-headline', sig.headline);
   if (sig.summary) renderSignalSummary(sig.summary);
+
+  // Apply band class to the buy-light pill so hold renders amber, exceptional renders deeper green.
+  if (sig.band) setBandClass('buy-light', sig.band);
+
+  // Dynamic aria-label / desc so screen readers reflect the live score and band.
+  if (typeof sig.score === 'number' && typeof sig.score_max === 'number') {
+    const scoreMax = sig.score_max;
+    const labelTxt = sig.label || 'Buying signal';
+    document.querySelectorAll('[data-field="dial-wrap"]').forEach((el) => {
+      el.setAttribute('aria-label', `${labelTxt}: ${sig.score} out of ${scoreMax}.`);
+    });
+    setText('dial-desc', `A semicircular dial showing the score ${sig.score} out of ${scoreMax}.`);
+    document.querySelectorAll('[data-field="buy-light"]').forEach((el) => {
+      el.setAttribute('aria-label', `${labelTxt}. Score ${sig.score} of ${scoreMax}.`);
+    });
+  }
+
+  // Dial needle: rotate to reflect score across 60–99 range.
+  if (typeof sig.score === 'number') {
+    const min = (sig.score_min_published ?? 60);
+    const max = (sig.score_max ?? 100);
+    const span = Math.max(1, max - min);
+    const clamped = Math.min(max, Math.max(min, sig.score));
+    const t = (clamped - min) / span;
+    // map t in [0,1] to angle along the arc from −135° (left) to −5° (right)
+    const angleDeg = -135 + t * 130;
+    const angle = (angleDeg * Math.PI) / 180;
+    const cx = 160, cy = 170, r = 91;
+    const nx = cx + r * Math.cos(angle);
+    const ny = cy + r * Math.sin(angle);
+    document.querySelectorAll('.dial-needle line').forEach((line) => {
+      line.setAttribute('x2', nx.toFixed(1));
+      line.setAttribute('y2', ny.toFixed(1));
+    });
+  }
+
+  // Score delta since last refresh (small subtitle under the buy-light).
+  if (typeof sig.score_delta === 'number' && Number.isFinite(sig.score_delta)) {
+    const sd = sig.score_delta;
+    const sign = sd > 0 ? '+' : sd < 0 ? '\u2212' : '\u00b1';
+    setText('score-delta', `${sign}${Math.abs(sd)}`);
+    setStatus('score-delta', sd > 0 ? 'positive' : sd < 0 ? 'negative' : 'flat');
+    const prevScore = typeof sig.previous_score === 'number' ? sig.previous_score : null;
+    setText('score-delta-meta', prevScore !== null ? `(prior ${prevScore}/${sig.score_max ?? 100})` : '');
+    showField('score-delta-wrap', sd !== 0);
+  } else {
+    showField('score-delta-wrap', false);
+  }
+
+  // Top drivers (max 2) shown subtly under the readout. Skip if list is empty.
+  if (Array.isArray(sig.drivers) && sig.drivers.length > 0) {
+    const parts = sig.drivers.slice(0, 2).map((d) => {
+      if (!d || typeof d !== 'object') return null;
+      const label = d.label || d.id || '';
+      const delta = typeof d.delta === 'number' ? d.delta : null;
+      if (!label) return null;
+      if (delta === null) return label;
+      const sign = delta > 0 ? '+' : delta < 0 ? '\u2212' : '\u00b1';
+      return `${label} (${sign}${Math.abs(delta)})`;
+    }).filter(Boolean);
+    if (parts.length > 0) {
+      setText('score-drivers', parts.join(' \u00b7 '));
+      showField('score-drivers-wrap', true);
+    } else {
+      showField('score-drivers-wrap', false);
+    }
+  } else {
+    showField('score-drivers-wrap', false);
+  }
+
+  // Methodology formula line: prefer the canonical weights_note from JSON when present.
+  if (typeof sig.weights_note === 'string' && sig.weights_note.length > 0) {
+    const bands = sig.bands || {};
+    const goodB = bands.good ? `${bands.good.min}\u2013${bands.good.max} ${bands.good.label}` : null;
+    const strongB = bands.strong ? `${bands.strong.min}\u2013${bands.strong.max} ${bands.strong.label}` : null;
+    const excB = bands.exceptional ? `${bands.exceptional.min}+ ${bands.exceptional.label}` : null;
+    const bandLine = [goodB, strongB, excB].filter(Boolean).join(' \u00b7 ');
+    const formula = bandLine ? `${sig.weights_note} Bands: ${bandLine}.` : sig.weights_note;
+    setText('method-signal-formula', formula);
+  }
 
   // ---- Methodology table -------------------------------------------------
   if (typeof copperShown === 'number') {

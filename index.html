@@ -89,10 +89,10 @@
           <article class="signal-card primary-signal" aria-labelledby="signal-label">
             <p id="signal-label" class="metric-label">Today’s buying signal</p>
 
-            <div class="dial-wrap" aria-label="Strong recovery window: 82 out of 100. Green light: good time to buy." data-field="dial-wrap">
+            <div class="dial-wrap" aria-label="Buying signal — see score readout below." data-field="dial-wrap">
               <svg class="dial-svg" viewBox="0 0 320 200" role="img" aria-labelledby="dial-title dial-desc">
                 <title id="dial-title">Copper recovery buying signal — arched dial</title>
-                <desc id="dial-desc" data-field="dial-desc">A semicircular dial showing the score 82 out of 100, sitting in the green buy zone.</desc>
+                <desc id="dial-desc" data-field="dial-desc">A semicircular dial showing the current buying signal score out of 100.</desc>
                 <defs>
                   <linearGradient id="copperArc" x1="0" x2="1" y1="0" y2="0">
                     <stop offset="0" stop-color="var(--color-copper-deep)" />
@@ -126,13 +126,23 @@
               </svg>
 
               <div class="dial-readout">
-                <div class="buy-light" role="status" aria-label="Green light: good time to buy. Score 82 of 100." data-field="buy-light">
+                <div class="buy-light" role="status" aria-label="Buying signal score readout." data-field="buy-light">
                   <span class="buy-light-dot" aria-hidden="true"></span>
                   <span class="buy-light-text" data-field="signal-label">Good time to buy</span>
                   <span class="buy-light-score" aria-hidden="true"><span data-field="signal-score">82</span><small>/<span data-field="signal-score-max">100</span></small></span>
                 </div>
               </div>
             </div>
+
+            <p class="signal-delta" data-field="score-delta-wrap" hidden>
+              <span class="signal-delta-label">Since last refresh</span>
+              <span class="signal-delta-value" data-field="score-delta">+0</span>
+              <span class="signal-delta-meta" data-field="score-delta-meta"></span>
+            </p>
+            <p class="signal-drivers" data-field="score-drivers-wrap" hidden>
+              <span class="signal-drivers-label">Top drivers:</span>
+              <span class="signal-drivers-list" data-field="score-drivers"></span>
+            </p>
 
             <h2 data-field="signal-headline">Strong recovery window</h2>
             <p id="signal-summary" data-field="signal-summary">
@@ -150,12 +160,17 @@
           <article class="market-card compact" aria-labelledby="market-label">
             <p id="market-label" class="metric-label">Today's copper reference</p>
             <strong>$<span data-field="copper-price" data-testid="text-copper-price">5.98</span><span class="unit" data-field="unit-per-lb" data-testid="unit-copper-price">USD/lb</span></strong>
-            <div class="delta-row" role="group" aria-label="Copper price change over 30 days, 12 months, and 5 years">
+            <div class="delta-row" role="group" aria-label="Copper price change over 1 day, 5 days, 30 days, 12 months, and 5 years">
+              <span class="metric-delta flat" title="1-day change" data-field="delta-1d-chip" hidden><span data-field="delta-1d">+0.00%</span> <span class="delta-unit">· 1d</span></span>
+              <span class="metric-delta flat" title="5-day change" data-field="delta-5d-chip" hidden><span data-field="delta-5d">+0.00%</span> <span class="delta-unit">· 5d</span></span>
               <span class="metric-delta positive" title="30-day change" data-field="delta-30d-chip"><span data-field="delta-30d">+6.06%</span> <span class="delta-unit">· 30d</span></span>
               <span class="metric-delta positive" title="12-month rolling change" data-field="delta-12mo-chip"><span data-field="delta-12mo">+29.7%</span> <span class="delta-unit">· 12mo</span></span>
               <span class="metric-delta positive" title="5-year change, 2021 to 2026" data-field="delta-5yr-chip"><span data-field="delta-5yr">+33.8%</span> <span class="delta-unit">· 5yr</span></span>
             </div>
             <p>Momentum supports urgency across short and long horizons; daily swings still matter.</p>
+            <p class="refresh-meta" data-field="refresh-meta-wrap" hidden>
+              <span data-field="refresh-meta">No prior refresh on record.</span>
+            </p>
           </article>
 
           <article class="market-card compact kpi-spread" aria-labelledby="spread-label">
@@ -301,10 +316,22 @@
                     <td><a href="https://rockawayrecycling.com/metal/1-bare-bright-wire/" target="_blank" rel="noopener noreferrer">Rockaway</a>, <a href="https://iscrapapp.com/metals/bare-bright-copper/" target="_blank" rel="noopener noreferrer">iScrap</a>, <a href="https://www.scrapmonster.com/scrap-prices/category/Copper-Scrap/128/1/1" target="_blank" rel="noopener noreferrer">ScrapMonster</a> · reference rates only.</td>
                   </tr>
                   <tr>
+                    <th scope="row">1-day change</th>
+                    <td class="num flat" data-field="method-delta-1d">—</td>
+                    <td>(Most recent close − previous trading-day close) ÷ previous close.</td>
+                    <td>Yahoo Finance HG=F daily history · single-session move, often noisy.</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">5-day change</th>
+                    <td class="num flat" data-field="method-delta-5d">—</td>
+                    <td>(Most recent close − close 5 trading days prior) ÷ close 5 days prior.</td>
+                    <td>Yahoo Finance HG=F daily history · short-window momentum, not a forecast.</td>
+                  </tr>
+                  <tr>
                     <th scope="row">Buying signal score</th>
                     <td class="num" data-field="method-signal-score">82 / 100</td>
-                    <td>Weighted blend: price momentum 35% · 5-yr context 25% · recycling demand relevance 20% · short-term risk 20%.</td>
-                    <td><a href="https://internationalcopper.org/wp-content/uploads/2022/02/ICA-RecyclingBrief-202201-A4-R2.pdf" target="_blank" rel="noopener noreferrer">ICA recycling brief</a> · prototype scoring, not a trade signal.</td>
+                    <td data-field="method-signal-formula">Score = 80 base + 1-day (capped ±4) + 5-day (capped ±5) + 30-day (capped ±5) + 5-year context (−2 to +3) + strip spread (±2). Floor 60, ceiling 99. Bands: 78–84 good time to buy · 85–91 strong buying window · 92+ exceptional recovery window.</td>
+                    <td><a href="https://internationalcopper.org/wp-content/uploads/2022/02/ICA-RecyclingBrief-202201-A4-R2.pdf" target="_blank" rel="noopener noreferrer">ICA recycling brief</a> · reference signal, not a trade signal or guarantee of return.</td>
                   </tr>
                 </tbody>
               </table>

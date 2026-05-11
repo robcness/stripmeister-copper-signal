@@ -156,12 +156,69 @@ For automated checks, every converted value carries a stable `data-testid`:
 - `block-calc`, `text-calc-bare-bright`, `text-calc-insulated`, `text-calc-strip-delta`, `text-calc-spread-value`
 - `copy-verify-local`, `copy-manual-labor`, `copy-yards-grading` (currency-sensitive copy hooks)
 
-## Prototype scoring model
+## Scoring model — momentum-sensitive, conservative
 
-- Price momentum: 35%
-- Five-year value context: 25%
-- Recycling demand relevance: 20%
-- Short-term risk adjustment: 20%
+The buying signal lives in `scripts/score-engine.mjs` and is a transparent,
+additive function of recent copper momentum. It is intentionally:
+
+- **Sensitive** — a single notable session (e.g. **+$0.19/lb** on a $6 base ≈
+  +3.2%) shifts the score by a few points, so the dashboard does not feel
+  stuck on the same number for weeks.
+- **Conservative** — every horizon is capped, the published range is
+  floored at **60** and ceilinged at **99**, and no band carries a hype or
+  ROI-guarantee message. The summary in every band ends with
+  *"Reference signal — not financial advice."*
+
+### Formula
+
+```
+score = clamp(
+  80                        // baseline
+  + adj_1d                  // capped ±4:  1 pt per 0.5% (sign matches direction)
+  + adj_5d                  // capped ±5:  1 pt per 1.5%
+  + adj_30d                 // capped ±5:  1 pt per 3.0%
+  + adj_5y_context          // {<0%: −2, 0–10%: 0, ≥10%: +1, ≥25%: +2, ≥50%: +3}
+  + adj_strip               // {≤$0: −2, 0–$2: 0, ≥$2: +1, ≥$4: +2}
+, 60, 99)
+```
+
+The maximum theoretical swing from the 80 baseline is about −16 / +19 once
+all five adjusters are saturated. In practice, components rarely all align,
+so the published score sits in a narrower band.
+
+### Bands and labels
+
+| Score    | Band         | Label                          | Tone                                                                                  |
+| -------- | ------------ | ------------------------------ | ------------------------------------------------------------------------------------- |
+| < 78     | `hold`       | Hold and verify locally        | Wait/verify; not a sell signal. Amber readout.                                        |
+| 78–84    | `good`       | Good time to buy               | Conditions support recovery work. Green readout.                                      |
+| 85–91    | `strong`     | Strong buying window           | Momentum and context line up. Green readout.                                          |
+| 92–99    | `exceptional`| Exceptional recovery window    | All inputs aligned positive; still capped at 99. Deeper-green readout.                |
+
+Every summary explicitly disclaims financial advice. No band is described as
+guaranteed return or a forecast.
+
+### Drivers
+
+The dashboard surfaces the **top two contributors by absolute magnitude**
+(zero-delta components are skipped). The driver list answers “why is the
+score where it is right now?” in plain language — e.g.
+*"30-day copper momentum (+4) · 5-year context (+2)"*.
+
+### Since-last-refresh
+
+`copper.since_last_refresh` compares the live copper price against the
+previous snapshot in `data/copper-signal.json`. When the change is
+negligible (`|Δ| < 0.01%`), the UI suppresses the ribbon to avoid clutter.
+The score delta (`signal.score_delta = score − previous_score`) renders
+below the dial only when non-zero.
+
+### Tests
+
+`node scripts/test-score-engine.mjs` exercises 13 scenarios covering
+the baseline, daily-only moves, 5-day moves, 30-day moves, strip-spread
+dampening, clamping, band lookup, driver ranking, and summary-tone
+guardrails (no “guaranteed,” “ROI,” “winning,” etc.).
 
 ## Local preview
 
@@ -237,25 +294,41 @@ hardcoded HTML values remain, so the page always renders.
   timestamp (e.g. a manual midnight refresh) does **not** count as
   "already refreshed" and the scheduled job is allowed to proceed.
 
-  The guard's holiday calendar is a transparent **U.S. equity / CME-style
-  market-holiday list** (defined in `scripts/schedule-guard.mjs` as
-  `HOLIDAYS_2026` / `HOLIDAYS_2027`): New Year's Day observed, MLK Day,
-  Presidents' Day, Good Friday, Memorial Day, Juneteenth observed,
-  Independence Day observed, Labor Day, Thanksgiving, and Christmas
-  observed. We chose U.S. market holidays because the live copper source
-  is COMEX High Grade Copper futures (`HG=F`) on CME, which follows the
-  U.S. holiday calendar. To switch to Canadian statutory holidays later,
-  edit those tables in `schedule-guard.mjs` and update this paragraph.
+  The guard's holiday calendar covers **both U.S. equity / CME-style market
+  holidays AND Canadian federal statutory holidays** for 2026 and 2027. The
+  structured tables live in `scripts/schedule-guard.mjs` as
+  `HOLIDAY_DETAILS_2026` / `HOLIDAY_DETAILS_2027`, each entry tagged with an
+  `origin` of `us`, `ca`, or `both`:
 
-  Guard logic is unit-tested in `scripts/test-schedule-guard.mjs` —
-  scenarios cover exact 09:30 in EDT and EST, before-09:30 SKIP,
-  after-16:30 cutoff SKIP, weekend and holiday skips, custom holiday
-  override, the May-7 delayed-firing regression (11:42 ET delayed run
-  with previous-day `generated_at` → RUN), the same-day duplicate dedupe
-  (already refreshed at 11:42 ET → second delayed run SKIPs), the
-  steady-state two-cron dedupe in both EDT and EST, the pre-09:30
-  same-day timestamp pass-through, null/garbage `generated_at` cold
-  starts, and an `America/Toronto` cross-check. Run with:
+  - **U.S. / CME**: New Year's Day observed, MLK Day, Presidents' Day,
+    Good Friday, Memorial Day, Juneteenth observed, Independence Day
+    observed, Labor Day, Thanksgiving, Christmas observed.
+  - **Canadian federal**: Victoria Day, Canada Day, Civic Holiday (first
+    Monday of August), National Day for Truth and Reconciliation (Sep 30,
+    observed where needed), Canadian Thanksgiving (second Monday of
+    October), Remembrance Day (Nov 11, observed where needed), Boxing Day
+    (observed).
+  - **Shared / overlap** (counted once): New Year's Day, Good Friday,
+    Labor/Labour Day, Christmas Day.
+
+  Skip messages include the holiday name and origin tag for transparency,
+  e.g. `Skip: 2026-07-01 is a market holiday — Canada Day [ca]`. Both
+  calendars matter: the live copper source is COMEX `HG=F` on CME (U.S.),
+  but StripMeister and a meaningful share of the audience are Canadian, so
+  refreshing the dashboard on Canada Day or Boxing Day would be off-tone
+  even if CME were trading.
+
+  Guard logic is unit-tested in `scripts/test-schedule-guard.mjs` — 89
+  assertions covering exact 09:30 in EDT and EST, before-09:30 SKIP,
+  after-16:30 cutoff SKIP, weekend skips, U.S.-only / Canadian-only /
+  shared holiday skips, the overlap dedupe rule, the `holidayDetail()`
+  lookup, custom holiday override, the May-7 delayed-firing regression
+  (11:42 ET delayed run with previous-day `generated_at` → RUN), the
+  same-day duplicate dedupe (already refreshed at 11:42 ET → second
+  delayed run SKIPs), the steady-state two-cron dedupe in both EDT and
+  EST, the pre-09:30 same-day timestamp pass-through, null/garbage
+  `generated_at` cold starts, and an `America/Toronto` cross-check.
+  Run with:
 
   ```bash
   node scripts/test-schedule-guard.mjs

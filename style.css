@@ -757,6 +757,81 @@ p { color: var(--color-text-muted); }
   letter-spacing: 0.06em;
 }
 
+/* Band-aware variants: hold = amber, good/strong/exceptional = green by default. */
+.buy-light.band-hold {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+}
+.buy-light.band-hold .buy-light-dot {
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--color-warning) 40%, #fff) 0%,
+    var(--color-warning) 55%,
+    color-mix(in srgb, var(--color-warning) 60%, #000) 100%
+  );
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent);
+}
+.buy-light.band-hold .buy-light-score {
+  border-left-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+.buy-light.band-exceptional {
+  background: color-mix(in srgb, var(--color-success) 24%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-success) 60%, transparent);
+}
+
+/* `hidden` attribute must always hide elements, even when other selectors set
+   display: inline-flex or flex. Place this near the top of the readout block. */
+[hidden] { display: none !important; }
+
+/* Restrained "since last refresh" + drivers lines, rendered below the dial. */
+.signal-delta,
+.signal-drivers {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.signal-drivers { margin-bottom: var(--space-2); }
+
+.signal-delta-label,
+.signal-drivers-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--color-text-faint);
+}
+
+.signal-delta-value {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--color-text);
+}
+
+.signal-delta-value.positive { color: var(--color-success); }
+.signal-delta-value.negative { color: var(--color-danger, var(--color-copper-deep)); }
+.signal-delta-value.flat { color: var(--color-text-faint); }
+
+.signal-delta-meta { color: var(--color-text-faint); }
+
+.signal-drivers-list {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.refresh-meta {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
 /* === Decision panel === */
 .decision-panel {
   margin-top: var(--space-4);

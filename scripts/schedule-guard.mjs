@@ -48,13 +48,24 @@
  *
  * Holiday calendar
  * ----------------
- * Transparent "U.S. equity / CME-style market holiday" list — see
- * HOLIDAYS_2026 / HOLIDAYS_2027 below. The user did not specify
- * Canadian vs U.S. holidays; we picked U.S. market holidays because
- * the underlying live source (Yahoo Finance HG=F = COMEX High Grade
- * Copper futures) is a U.S. CME-traded instrument, and CME copper
- * follows the U.S. market-holiday calendar. Easy to swap to Canadian
- * statutory holidays later by editing the HOLIDAYS_* tables.
+ * The guard skips on BOTH U.S./CME market holidays (the live copper
+ * source HG=F is a CME instrument; the U.S. calendar is when the
+ * underlying data feed itself is closed) AND Canadian federal/
+ * statutory holidays (StripMeister is a Canadian-facing business and
+ * a refresh that fires on a Canadian holiday is not useful to the
+ * audience the widget serves).
+ *
+ * Each entry is tagged with its country/origin and human-readable name
+ * so the skip reason is transparent in the workflow log. When a date
+ * appears on both calendars (e.g. New Year's Day, Christmas, Good
+ * Friday, Labor/Labour Day) a single dedup'd entry is sufficient —
+ * one skip is enough.
+ *
+ * Sources:
+ *   - NYSE / CME Group equity & metals holiday calendars (U.S. side)
+ *   - Government of Canada public holidays (Canadian side)
+ * Observed-day rules applied (e.g. when a fixed-date holiday falls on
+ * a weekend, the observed weekday is used).
  *
  * Output
  * ------
@@ -79,43 +90,90 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // ---- Holiday calendars --------------------------------------------------
-// U.S. equity / CME-style market holidays. ISO date strings (YYYY-MM-DD)
-// in America/New_York local date. These are the days the COMEX High Grade
-// Copper futures market is *closed* (full closure, not the early-close
-// half-days — early closes still allow a 09:30 ET refresh).
+// Combined U.S. (CME) + Canadian (federal/statutory) holiday calendar.
+// HOLIDAY_DETAILS_<year> is the human-readable structured table; the
+// derived HOLIDAYS_<year> arrays are de-duplicated ISO date strings
+// consumed by `decide()`. ISO dates are interpreted in
+// America/New_York local date so the schedule guard logic stays in a
+// single timezone.
 //
-// Sources: NYSE holiday calendar + CME Group equity/metals holiday calendar.
-// Adjust freely. To switch to Canadian statutory holidays, replace these
-// tables (and update the comment in update-copper-data.yml).
+// origin: "us"   = U.S. equity / CME market holiday (HG=F feed closed)
+//         "ca"   = Canadian federal / statutory holiday (audience day off)
+//         "both" = a single calendar day that falls on both calendars
+//                   — one skip is enough.
 //
-// Observed-day rules already applied (e.g. Independence Day 2026 falls on
-// Saturday → observed Friday 2026-07-03).
+// Observed-day rules applied (Independence Day 2026 falls on Saturday
+// → observed Friday 2026-07-03; Boxing Day 2026 falls on Saturday →
+// observed Monday 2026-12-28; etc.).
 
-export const HOLIDAYS_2026 = Object.freeze([
-  "2026-01-01", // New Year's Day
-  "2026-01-19", // MLK Jr. Day
-  "2026-02-16", // Presidents' Day (Washington's Birthday)
-  "2026-04-03", // Good Friday
-  "2026-05-25", // Memorial Day
-  "2026-06-19", // Juneteenth (Friday — observed in place)
-  "2026-07-03", // Independence Day observed (July 4 = Saturday)
-  "2026-09-07", // Labor Day
-  "2026-11-26", // Thanksgiving
-  "2026-12-25", // Christmas
+export const HOLIDAY_DETAILS_2026 = Object.freeze([
+  // US-only
+  { date: "2026-01-19", name: "Martin Luther King Jr. Day",   origin: "us" },
+  { date: "2026-02-16", name: "Presidents' Day",              origin: "us" },
+  { date: "2026-05-25", name: "Memorial Day (US)",            origin: "us" },
+  { date: "2026-06-19", name: "Juneteenth",                   origin: "us" },
+  { date: "2026-07-03", name: "Independence Day observed (Jul 4 = Sat)", origin: "us" },
+  { date: "2026-11-26", name: "U.S. Thanksgiving",            origin: "us" },
+  // Canada-only
+  { date: "2026-05-18", name: "Victoria Day (CA)",            origin: "ca" },
+  { date: "2026-07-01", name: "Canada Day",                   origin: "ca" },
+  { date: "2026-08-03", name: "Civic Holiday (CA)",           origin: "ca" },
+  { date: "2026-09-30", name: "National Day for Truth and Reconciliation (CA)", origin: "ca" },
+  { date: "2026-10-12", name: "Canadian Thanksgiving",        origin: "ca" },
+  { date: "2026-11-11", name: "Remembrance Day (CA)",         origin: "ca" },
+  { date: "2026-12-28", name: "Boxing Day observed (Dec 26 = Sat)", origin: "ca" },
+  // On both calendars (one skip is enough)
+  { date: "2026-01-01", name: "New Year's Day",               origin: "both" },
+  { date: "2026-04-03", name: "Good Friday",                  origin: "both" },
+  { date: "2026-09-07", name: "Labor / Labour Day",           origin: "both" },
+  { date: "2026-12-25", name: "Christmas Day",                origin: "both" },
 ]);
 
-export const HOLIDAYS_2027 = Object.freeze([
-  "2027-01-01", // New Year's Day
-  "2027-01-18", // MLK Jr. Day
-  "2027-02-15", // Presidents' Day
-  "2027-03-26", // Good Friday
-  "2027-05-31", // Memorial Day
-  "2027-06-18", // Juneteenth observed (June 19 = Saturday)
-  "2027-07-05", // Independence Day observed (July 4 = Sunday)
-  "2027-09-06", // Labor Day
-  "2027-11-25", // Thanksgiving
-  "2027-12-24", // Christmas observed (Dec 25 = Saturday)
+export const HOLIDAY_DETAILS_2027 = Object.freeze([
+  // US-only
+  { date: "2027-01-18", name: "Martin Luther King Jr. Day",   origin: "us" },
+  { date: "2027-02-15", name: "Presidents' Day",              origin: "us" },
+  { date: "2027-05-31", name: "Memorial Day (US)",            origin: "us" },
+  { date: "2027-06-18", name: "Juneteenth observed (Jun 19 = Sat)", origin: "us" },
+  { date: "2027-07-05", name: "Independence Day observed (Jul 4 = Sun)", origin: "us" },
+  { date: "2027-11-25", name: "U.S. Thanksgiving",            origin: "us" },
+  // Canada-only
+  { date: "2027-05-24", name: "Victoria Day (CA)",            origin: "ca" },
+  { date: "2027-07-01", name: "Canada Day",                   origin: "ca" },
+  { date: "2027-08-02", name: "Civic Holiday (CA)",           origin: "ca" },
+  { date: "2027-09-30", name: "National Day for Truth and Reconciliation (CA)", origin: "ca" },
+  { date: "2027-10-11", name: "Canadian Thanksgiving",        origin: "ca" },
+  { date: "2027-11-11", name: "Remembrance Day (CA)",         origin: "ca" },
+  { date: "2027-12-27", name: "Christmas observed (Dec 25 = Sat)", origin: "both" },
+  { date: "2027-12-28", name: "Boxing Day observed (Dec 26 = Sun)", origin: "ca" },
+  // On both calendars
+  { date: "2027-01-01", name: "New Year's Day",               origin: "both" },
+  { date: "2027-03-26", name: "Good Friday",                  origin: "both" },
+  { date: "2027-09-06", name: "Labor / Labour Day",           origin: "both" },
 ]);
+
+function dedupeIsoDates(details) {
+  const seen = new Set();
+  for (const d of details) seen.add(d.date);
+  return Array.from(seen).sort();
+}
+
+export const HOLIDAYS_2026 = Object.freeze(dedupeIsoDates(HOLIDAY_DETAILS_2026));
+export const HOLIDAYS_2027 = Object.freeze(dedupeIsoDates(HOLIDAY_DETAILS_2027));
+
+/**
+ * Look up the (name, origin) tuple for a given ISO date across all
+ * tracked years. Returns null if the date is not a tracked holiday.
+ * Used in the skip-reason string so log readers can see WHY a date
+ * was skipped ("market holiday 2026-07-01 — Canada Day [ca]").
+ */
+export function holidayDetail(iso) {
+  for (const tbl of [HOLIDAY_DETAILS_2026, HOLIDAY_DETAILS_2027]) {
+    const hit = tbl.find((row) => row.date === iso);
+    if (hit) return hit;
+  }
+  return null;
+}
 
 export const DEFAULT_HOLIDAYS = Object.freeze([
   ...HOLIDAYS_2026,
@@ -193,9 +251,13 @@ export function decide({
     return { run: false, reason: `weekend (${local.date})`, local };
   }
 
-  // 2. Holiday?
+  // 2. Holiday? Annotate with name + origin (us/ca/both) when available.
   if (holidays.includes(local.date)) {
-    return { run: false, reason: `market holiday (${local.date})`, local };
+    const detail = holidayDetail(local.date);
+    const annotation = detail
+      ? ` — ${detail.name} [${detail.origin}]`
+      : '';
+    return { run: false, reason: `market holiday (${local.date})${annotation}`, local };
   }
 
   // 3. Time window — must be at/after 09:30 ET and strictly before the
