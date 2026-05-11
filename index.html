@@ -90,37 +90,42 @@
             <p id="signal-label" class="metric-label">Today’s buying signal</p>
 
             <div class="dial-wrap" aria-label="Buying signal — see score readout below." data-field="dial-wrap">
-              <svg class="dial-svg" viewBox="0 0 320 200" role="img" aria-labelledby="dial-title dial-desc">
-                <title id="dial-title">Copper recovery buying signal — arched dial</title>
-                <desc id="dial-desc" data-field="dial-desc">A semicircular dial showing the current buying signal score out of 100.</desc>
-                <defs>
-                  <linearGradient id="copperArc" x1="0" x2="1" y1="0" y2="0">
-                    <stop offset="0" stop-color="var(--color-copper-deep)" />
-                    <stop offset="0.55" stop-color="var(--color-copper)" />
-                    <stop offset="1" stop-color="var(--color-copper-bright)" />
-                  </linearGradient>
-                  <linearGradient id="trackArc" x1="0" x2="1" y1="0" y2="0">
-                    <stop offset="0" stop-color="var(--color-surface-offset)" />
-                    <stop offset="1" stop-color="var(--color-surface-2)" />
-                  </linearGradient>
-                </defs>
-                <!-- background track -->
+              <svg class="dial-svg" viewBox="0 0 320 210" role="img" aria-labelledby="dial-title dial-desc">
+                <title id="dial-title">Copper recovery buying signal — banded arched gauge</title>
+                <desc id="dial-desc" data-field="dial-desc">A semicircular gauge with color-coded segments: amber for 78–84 (good), copper for 85–91 (strong), and green for 92 and above (exceptional). A needle marks the current score out of 100.</desc>
+                <!-- background track (full arc, neutral) -->
                 <path class="dial-track" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" />
-                <!-- copper-toned graduated arc representing scoring band -->
-                <path class="dial-fill" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" />
-                <!-- tick marks -->
-                <g class="dial-ticks" aria-hidden="true">
-                  <line x1="40" y1="170" x2="48" y2="166" />
-                  <line x1="64" y1="118" x2="72" y2="120" />
-                  <line x1="106" y1="80" x2="110" y2="88" />
-                  <line x1="160" y1="68" x2="160" y2="78" />
-                  <line x1="214" y1="80" x2="210" y2="88" />
-                  <line x1="256" y1="118" x2="248" y2="120" />
-                  <line x1="280" y1="170" x2="272" y2="166" />
+                <!-- Banded segments. Each segment uses dasharray on the same path with pathLength=100
+                     so band edges map to score thresholds via (score - score_min)/(score_max - score_min) * 100.
+                     Below the lowest band (60–77.99) stays as the neutral track to keep the eye on the buying window. -->
+                <path class="dial-band band-good" data-field="band-good-arc" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" stroke-dasharray="0 45 17.5 100" />
+                <path class="dial-band band-strong" data-field="band-strong-arc" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" stroke-dasharray="0 62.5 17.5 100" />
+                <path class="dial-band band-exceptional" data-field="band-exceptional-arc" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" stroke-dasharray="0 80 20 100" />
+                <!-- Threshold tick marks at band edges: 60, 78, 85, 92, 100. Static defaults
+                     keep the gauge legible when JSON hydration fails; app.js redraws these
+                     from signal.bands on successful fetch. Positions assume score range 60–100
+                     mapped to arc angle 180°–360° on a r=120 semicircle centered (160,170). -->
+                <g class="dial-ticks" data-field="dial-ticks" aria-hidden="true">
+                  <line x1="51.0" y1="170.0" x2="29.0" y2="170.0" />
+                  <line x1="142.9" y1="62.3" x2="139.5" y2="40.6" />
+                  <line x1="201.7" y1="69.3" x2="210.1" y2="49.0" />
+                  <line x1="248.2" y1="105.9" x2="266.0" y2="93.0" />
+                  <line x1="269.0" y1="170.0" x2="291.0" y2="170.0" />
                 </g>
-                <!-- needle for score 82/100 -->
+                <g class="dial-tick-labels" data-field="dial-tick-labels" aria-hidden="true">
+                  <text x="12.0" y="170.0">60</text>
+                  <text x="136.8" y="23.8">78</text>
+                  <text x="216.6" y="33.3">85</text>
+                  <text x="279.7" y="83.0">92</text>
+                  <text x="308.0" y="170.0">100</text>
+                </g>
+                <!-- Needle marking current score. Static default points to the
+                     HTML default score of 82 ("Good time to buy"); app.js redraws
+                     this once JSON hydration succeeds. Tip length matches rNeedle=109
+                     in app.js so the static fallback uses identical geometry to the
+                     JS-hydrated needle and lands on the inner edge of the arc. -->
                 <g class="dial-needle">
-                  <line x1="160" y1="170" x2="251" y2="113" />
+                  <line x1="160" y1="170" x2="177.0" y2="62.3" />
                   <circle cx="160" cy="170" r="9" class="dial-hub" />
                 </g>
               </svg>
@@ -132,6 +137,14 @@
                   <span class="buy-light-score" aria-hidden="true"><span data-field="signal-score">82</span><small>/<span data-field="signal-score-max">100</span></small></span>
                 </div>
               </div>
+              <p class="dial-band-legend" data-field="dial-band-legend" aria-hidden="true">
+                <span class="dial-band-legend-label">Score bands</span>
+                <span class="dial-band-key band-good"><span class="dial-band-key-dot" aria-hidden="true"></span><span class="dial-band-chip-range">78–84</span>&nbsp;good</span>
+                <span class="dial-band-key-sep" aria-hidden="true">·</span>
+                <span class="dial-band-key band-strong"><span class="dial-band-key-dot" aria-hidden="true"></span><span class="dial-band-chip-range">85–91</span>&nbsp;strong</span>
+                <span class="dial-band-key-sep" aria-hidden="true">·</span>
+                <span class="dial-band-key band-exceptional"><span class="dial-band-key-dot" aria-hidden="true"></span><span class="dial-band-chip-range">92+</span>&nbsp;exceptional</span>
+              </p>
             </div>
 
             <p class="signal-delta" data-field="score-delta-wrap" hidden>

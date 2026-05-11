@@ -419,29 +419,160 @@ function render() {
     document.querySelectorAll('[data-field="dial-wrap"]').forEach((el) => {
       el.setAttribute('aria-label', `${labelTxt}: ${sig.score} out of ${scoreMax}.`);
     });
-    setText('dial-desc', `A semicircular dial showing the score ${sig.score} out of ${scoreMax}.`);
+    // Build a band-aware desc that screen-reader users hear in place of the
+    // legend chips (which are aria-hidden to avoid duplication).
+    const bdesc = sig.bands || {};
+    const bandsLine = (bdesc.good && bdesc.strong && bdesc.exceptional)
+      ? ` Score bands: ${bdesc.good.min}\u2013${bdesc.good.max} good, ${bdesc.strong.min}\u2013${bdesc.strong.max} strong, ${bdesc.exceptional.min}+ exceptional.`
+      : '';
+    setText('dial-desc', `A semicircular banded gauge showing score ${sig.score} of ${scoreMax} (${labelTxt}).${bandsLine}`);
     document.querySelectorAll('[data-field="buy-light"]').forEach((el) => {
       el.setAttribute('aria-label', `${labelTxt}. Score ${sig.score} of ${scoreMax}.`);
     });
   }
 
-  // Dial needle: rotate to reflect score across 60–99 range.
+  // === Banded gauge: needle + segmented arcs + tick labels + legend ========
+  // The gauge is driven entirely from signal.bands and signal.score so any
+  // future tweak to band thresholds in JSON is reflected in the UI without
+  // touching markup. Math:
+  //   Score range = [score_min_published, score_max] (defaults 60..100).
+  //   Arc path is a semicircle (M40 170 A120 120 0 0 1 280 170) with
+  //   pathLength="100". Path traversal t in [0,1] maps linearly to score
+  //   via t = (score - min) / (max - min), which also maps to the SVG arc
+  //   angle from 180° (left) to 360° (right).
   if (typeof sig.score === 'number') {
     const min = (sig.score_min_published ?? 60);
     const max = (sig.score_max ?? 100);
     const span = Math.max(1, max - min);
     const clamped = Math.min(max, Math.max(min, sig.score));
     const t = (clamped - min) / span;
-    // map t in [0,1] to angle along the arc from −135° (left) to −5° (right)
-    const angleDeg = -135 + t * 130;
+
+    // --- 1) Needle position ------------------------------------------------
+    // Map t in [0,1] to angle 180°..360° (full half-arc). This aligns the
+    // needle tip with the visible arc segment ends, so a score at a band
+    // boundary actually points at the boundary tick.
+    //
+    // rNeedle is tuned to land the needle tip at the inner edge of the arc
+    // stroke (rInner = 109) so the tip visually intersects the active band
+    // rather than floating inside the dial. Earlier value (96) left the tip
+    // well short of the bands and made high scores look low — e.g. a score
+    // of 96 read visually as ~90 because the tip sat far below the green arc.
+    const angleDeg = 180 + t * 180;
     const angle = (angleDeg * Math.PI) / 180;
-    const cx = 160, cy = 170, r = 91;
-    const nx = cx + r * Math.cos(angle);
-    const ny = cy + r * Math.sin(angle);
+    const cx = 160, cy = 170, rNeedle = 109;
+    const nx = cx + rNeedle * Math.cos(angle);
+    const ny = cy + rNeedle * Math.sin(angle);
     document.querySelectorAll('.dial-needle line').forEach((line) => {
       line.setAttribute('x2', nx.toFixed(1));
       line.setAttribute('y2', ny.toFixed(1));
     });
+
+    // --- 2) Banded arc segments via stroke-dasharray -----------------------
+    // For each band we draw a transparent run up to its start, then a visible
+    // run of length (end - start) along pathLength=100. Final "100" pads so
+    // SVG doesn't repeat the pattern.
+    const bandsCfg = sig.bands || {};
+    const scoreToPct = (s) => Math.max(0, Math.min(100, ((s - min) / span) * 100));
+    const segs = [
+      { key: 'good',        sel: '[data-field="band-good-arc"]',        cfg: bandsCfg.good },
+      { key: 'strong',      sel: '[data-field="band-strong-arc"]',      cfg: bandsCfg.strong },
+      { key: 'exceptional', sel: '[data-field="band-exceptional-arc"]', cfg: bandsCfg.exceptional },
+    ];
+    segs.forEach((seg) => {
+      if (!seg.cfg) return;
+      // "max" in the JSON is inclusive (e.g. good: 78..84). Render the arc up
+      // through the next band's lower edge so segments tile end-to-end with
+      // no visual gap. For the exceptional band, extend to the score ceiling.
+      const startPct = scoreToPct(seg.cfg.min);
+      let endScore;
+      if (seg.key === 'good' && bandsCfg.strong) endScore = bandsCfg.strong.min;
+      else if (seg.key === 'strong' && bandsCfg.exceptional) endScore = bandsCfg.exceptional.min;
+      else endScore = max;
+      const endPct = scoreToPct(endScore);
+      const lengthPct = Math.max(0, endPct - startPct);
+      const dash = `0 ${startPct.toFixed(2)} ${lengthPct.toFixed(2)} 100`;
+      document.querySelectorAll(seg.sel).forEach((el) => {
+        el.setAttribute('stroke-dasharray', dash);
+        // Active band = the one containing the current score.
+        const isActive = sig.band === seg.key;
+        el.classList.toggle('is-active', isActive);
+      });
+    });
+
+    // --- 3) Threshold tick marks and numeric labels -----------------------
+    // Ticks sit at score_min, each band.min, and score_max. They double as
+    // both visual ticks (inside the arc) and numeric labels (just outside),
+    // so the buying-window thresholds are spelled out without a separate axis.
+    const ticksGroup = document.querySelector('[data-field="dial-ticks"]');
+    const labelsGroup = document.querySelector('[data-field="dial-tick-labels"]');
+    if (ticksGroup && labelsGroup) {
+      const tickScores = [min];
+      ['good', 'strong', 'exceptional'].forEach((k) => {
+        if (bandsCfg[k] && typeof bandsCfg[k].min === 'number') tickScores.push(bandsCfg[k].min);
+      });
+      tickScores.push(max);
+      // De-duplicate and sort
+      const uniqueTicks = Array.from(new Set(tickScores)).sort((a, b) => a - b);
+
+      // Clear previous tick content (idempotent re-render).
+      while (ticksGroup.firstChild) ticksGroup.removeChild(ticksGroup.firstChild);
+      while (labelsGroup.firstChild) labelsGroup.removeChild(labelsGroup.firstChild);
+
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const rInner = 109;   // inside edge of stroke
+      const rOuter = 131;   // outside edge of stroke
+      const rLabel = 148;   // numeric label radius (outside the arc)
+      uniqueTicks.forEach((s) => {
+        const tt = (s - min) / span;
+        const a = ((180 + tt * 180) * Math.PI) / 180;
+        const cosA = Math.cos(a), sinA = Math.sin(a);
+        const x1 = cx + rInner * cosA;
+        const y1 = cy + rInner * sinA;
+        const x2 = cx + rOuter * cosA;
+        const y2 = cy + rOuter * sinA;
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', x1.toFixed(1));
+        line.setAttribute('y1', y1.toFixed(1));
+        line.setAttribute('x2', x2.toFixed(1));
+        line.setAttribute('y2', y2.toFixed(1));
+        ticksGroup.appendChild(line);
+
+        const lx = cx + rLabel * cosA;
+        const ly = cy + rLabel * sinA;
+        const text = document.createElementNS(SVG_NS, 'text');
+        text.setAttribute('x', lx.toFixed(1));
+        text.setAttribute('y', ly.toFixed(1));
+        // Highlight the threshold closest to the current score so the eye
+        // anchors on the value without making the rest of the axis louder.
+        if (Math.abs(s - clamped) < 0.5) text.classList.add('is-active');
+        text.textContent = String(s);
+        labelsGroup.appendChild(text);
+      });
+    }
+
+    // --- 4) Band legend chips (data-driven from signal.bands) -------------
+    // Keep the legend hidden from screen readers (aria-hidden on the <p>) so
+    // it doesn't duplicate the desc text that already names the bands.
+    const legend = document.querySelector('[data-field="dial-band-legend"]');
+    if (legend && bandsCfg.good && bandsCfg.strong && bandsCfg.exceptional) {
+      const keys = legend.querySelectorAll('.dial-band-key');
+      const setKeyRange = (key, rangeText) => {
+        if (!key) return;
+        const rangeEl = key.querySelector('.dial-band-chip-range');
+        if (rangeEl) rangeEl.textContent = rangeText;
+      };
+      const fmtRange = (b) => `${b.min}\u2013${b.max}`;
+      // Render in the same DOM order as the markup: good / strong / exceptional.
+      if (keys[0]) setKeyRange(keys[0], fmtRange(bandsCfg.good));
+      if (keys[1]) setKeyRange(keys[1], fmtRange(bandsCfg.strong));
+      // Exceptional caps the open-ended top band: "92+".
+      if (keys[2]) setKeyRange(keys[2], `${bandsCfg.exceptional.min}+`);
+      // Brighten the key matching the current band; dim the others.
+      keys.forEach((k) => {
+        const isActive = k.classList.contains(`band-${sig.band || ''}`);
+        k.classList.toggle('is-active', isActive);
+      });
+    }
   }
 
   // Score delta since last refresh (small subtitle under the buy-light).
