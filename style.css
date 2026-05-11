@@ -28,6 +28,26 @@
   --color-copper-bright: #d98a3e;
   --color-copper-light: #e8b182;
 
+  /* === Metallic gauge palette ============================================
+     Five stops, each a *richer* version of the existing four band colors,
+     pushed slightly warmer / more saturated so the arc reads as polished
+     metal rather than flat paint. The stops align (roughly) with the score
+     segment boundaries 60 / 78 / 85 / 92 / 100. No harsh red, no rainbow.
+       gauge-1  = burnished copper-brown (watch / verify, low end)
+       gauge-2  = amber-copper mid-tone (transition into good)
+       gauge-3  = amber/copper warm (good)
+       gauge-4  = warm olive-green (strong)
+       gauge-5  = vivid recovery green (exceptional)
+     gauge-sheen-* are the highlight + shadow used by the metallic dual
+     stroke overlay to fake a polished bevel without rainbow clutter. */
+  --color-gauge-1: #7a3e14;
+  --color-gauge-2: #b8631e;
+  --color-gauge-3: #d98a3e;
+  --color-gauge-4: #7c9a3d;
+  --color-gauge-5: #2f8260;
+  --color-gauge-sheen-hi: rgba(255, 233, 196, 0.55);
+  --color-gauge-sheen-lo: rgba(34, 18, 6, 0.32);
+
   /* Blue — ONLY for primary CTA button */
   --color-cta-blue: #0a66d8;
   --color-cta-blue-hover: #084fae;
@@ -90,6 +110,17 @@
   --color-copper-deep: #8b4f1c;
   --color-copper-bright: #f0a869;
   --color-copper-light: #ebc69a;
+
+  /* Metallic gauge palette — dark theme. Slightly brighter / more saturated
+     so the arc lifts off the charcoal panel and reads as polished copper.
+     Same five-stop structure as the light theme. */
+  --color-gauge-1: #a85a22;
+  --color-gauge-2: #de8a3a;
+  --color-gauge-3: #f4a85c;
+  --color-gauge-4: #b6cc5e;
+  --color-gauge-5: #4cb487;
+  --color-gauge-sheen-hi: rgba(255, 226, 174, 0.42);
+  --color-gauge-sheen-lo: rgba(0, 0, 0, 0.45);
 
   --color-cta-blue: #4f9bff;
   --color-cta-blue-hover: #76b1ff;
@@ -639,17 +670,21 @@ p { color: var(--color-text-muted); }
   color: var(--color-copper);
 }
 
-/* === Arched stoplight dial =============================================
+/* === Arched metallic gauge =============================================
    The gauge is a half-circle (radius 120, center cx=160 cy=170) rendered as
-   four DISCRETE colored segments rather than a continuous gradient. The
-   palette descends from the optimal green band through olive-green and
-   amber-copper into a burnished copper-brown at the cautious end — a
-   stoplight read inside the copper hue, with no harsh red (StripMeister
-   already owns red) and no rainbow look. Visible divider lines and threshold
-   numerics overlay the bands so the eye can read both color and value.
-   The needle is a stylized elongated triangle drawn as a single <polygon>
-   so it stays crisp at any rotation. All segment colors come from CSS custom
-   properties so light/dark themes propagate without JS. */
+   a CONTINUOUS metallic copper-to-green gradient that descends from
+   burnished copper-brown at the low (verify / watch) end, through warm
+   amber-copper (good), into olive-green (strong) and finally a vivid
+   recovery green (exceptional). Five SVG <stop>s align roughly with the
+   score band edges 60 / 78 / 85 / 92 / 100 so the gradient still reads as
+   a four-step descent. A second arc overlay paints a soft highlight on the
+   upper edge and a shadow on the lower edge of the stroke so the metal
+   reads as polished — not flat paint, not a rainbow. Divider tick lines,
+   numeric labels, and an inline band legend sit on top so the band edges
+   stay scannable. The needle is a stylized elongated triangle drawn as a
+   single <polygon> so it stays crisp at any rotation. All gradient stop
+   colors come from CSS custom properties (--color-gauge-1…5) so light /
+   dark themes propagate without JS. */
 .dial-wrap {
   position: relative;
   max-width: 32rem;
@@ -673,38 +708,88 @@ p { color: var(--color-text-muted); }
   stroke-linecap: butt;
 }
 
-/* Four discrete band segments rendered on the same arc path using
-   stroke-dasharray on pathLength=100. app.js sets each dasharray from
-   signal.bands so band edges always match the JSON thresholds. The static
-   HTML defaults assume 60/78/85/92 thresholds. */
-.dial-band {
+/* Gradient stop colors. Set in CSS (rather than as SVG presentation
+   attributes) so the var() lookups resolve through the document's theme
+   tokens — light/dark themes automatically retint the gauge. */
+.dial-grad-stop-1 { stop-color: var(--color-gauge-1); }
+.dial-grad-stop-2 { stop-color: var(--color-gauge-2); }
+.dial-grad-stop-3 { stop-color: var(--color-gauge-3); }
+.dial-grad-stop-4 { stop-color: var(--color-gauge-4); }
+.dial-grad-stop-5 { stop-color: var(--color-gauge-5); }
+.dial-sheen-stop  { stop-color: var(--color-gauge-sheen-hi); }
+.dial-shadow-stop { stop-color: var(--color-gauge-sheen-lo); }
+
+/* Continuous metallic gradient arc. The <linearGradient id="dial-grad"> in
+   index.html holds the five stop colors keyed off --color-gauge-1…5 (so
+   light/dark themes propagate without JS). This single stroke replaces the
+   previous four discrete band paths but still carries the same descent. */
+.dial-band-gradient {
   fill: none;
+  stroke: url(#dial-grad);
   stroke-width: 22;
   stroke-linecap: butt;
+  /* A subtle outer glow lifts the metallic arc off the panel so it reads
+     as attention-grabbing without resorting to harsh red. The glow color
+     blends warm copper into a hint of the exceptional green so it stays
+     in-palette regardless of which segment the needle points to. */
+  filter:
+    drop-shadow(0 6px 14px color-mix(in srgb, var(--color-copper-deep) 28%, transparent))
+    drop-shadow(0 0 6px color-mix(in srgb, var(--color-success) 14%, transparent));
+}
+[data-theme='light'] .dial-band-gradient {
+  filter:
+    drop-shadow(0 6px 14px color-mix(in srgb, var(--color-copper-deep) 18%, transparent))
+    drop-shadow(0 0 4px color-mix(in srgb, var(--color-success) 10%, transparent));
+}
+
+/* Metallic sheen overlay. A second arc drawn ON TOP of the gradient stroke,
+   using a NARROWER stroke offset slightly upward via a second linear
+   gradient (#dial-sheen). The sheen runs along the upper edge of the band
+   to fake a highlight; a second, darker arc below the centerline fakes a
+   shadow. Together they read as a polished bevel without overlaying any
+   rainbow color. Both arcs sit at low opacity so the underlying gradient
+   color still carries the meaning. */
+.dial-band-sheen {
+  fill: none;
+  stroke: url(#dial-sheen);
+  stroke-width: 8;
+  stroke-linecap: butt;
+  /* Slight vertical lift so the highlight sits along the upper rim of
+     the main stroke rather than centered on it. */
+  transform: translateY(-6px);
+  mix-blend-mode: screen;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.dial-band-shadow {
+  fill: none;
+  stroke: url(#dial-shadow);
+  stroke-width: 7;
+  stroke-linecap: butt;
+  transform: translateY(5px);
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+  pointer-events: none;
+}
+[data-theme='light'] .dial-band-shadow { opacity: 0.40; }
+
+/* Active-band emphasis. The continuous gradient already carries band color;
+   this thin overlay halo subtly brightens the active band so the user's eye
+   snaps to where the needle is pointing without dimming the rest of the
+   arc (which would lose the metallic continuity). app.js sets the dasharray
+   on this overlay so only the active segment paints. */
+.dial-band-active {
+  fill: none;
+  stroke: color-mix(in srgb, #fff 60%, transparent);
+  stroke-width: 22;
+  stroke-linecap: butt;
+  mix-blend-mode: overlay;
+  opacity: 0;
   transition: stroke-dasharray 240ms ease-out, opacity 200ms ease;
-  opacity: 1;
+  pointer-events: none;
 }
-
-/* Stoplight palette — four colors descending from optimal: vivid green,
-   muted olive-green, amber copper, burnished copper-brown. No rainbow,
-   no warning red. */
-.dial-band.band-watch {
-  stroke: var(--color-copper-deep);
-}
-.dial-band.band-good {
-  stroke: var(--color-copper-bright);
-}
-.dial-band.band-strong {
-  stroke: var(--color-success-muted);
-}
-.dial-band.band-exceptional {
-  stroke: var(--color-success);
-  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--color-success) 28%, transparent));
-}
-
-/* When the live data identifies which band is active, dim the others so
-   the eye snaps to the current band without losing the threshold context. */
-.dial-band.is-dim { opacity: 0.4; }
+.dial-band-active.is-on { opacity: 0.45; }
+[data-theme='light'] .dial-band-active.is-on { opacity: 0.35; }
 
 /* Faint divider lines layered across the segment seams so the band
    thresholds remain visually scannable even at low contrast. */
@@ -973,22 +1058,41 @@ p { color: var(--color-text-muted); }
    60 we don't ship a separate 'verify' chip in the legend (it would clutter
    the row for a band the user rarely sees). Verify is still named in the
    screen-reader desc above so the category isn't hidden, just not chip-listed. */
+/* Legend dot colors mirror the gauge gradient stops (--color-gauge-1..5)
+   exactly so the chip palette matches the metallic arc above. A thin radial
+   highlight gives the dot a tiny metallic sheen. */
 .dial-band-key.band-verify .dial-band-key-dot,
 .dial-band-key.band-watch .dial-band-key-dot {
-  background: var(--color-copper-deep);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-copper-deep) 20%, transparent);
+  background:
+    radial-gradient(circle at 35% 30%,
+      color-mix(in srgb, var(--color-gauge-1) 40%, #fff) 0%,
+      var(--color-gauge-1) 60%,
+      color-mix(in srgb, var(--color-gauge-1) 70%, #000) 100%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-gauge-1) 22%, transparent);
 }
 .dial-band-key.band-good .dial-band-key-dot {
-  background: var(--color-copper-bright);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-copper-bright) 22%, transparent);
+  background:
+    radial-gradient(circle at 35% 30%,
+      color-mix(in srgb, var(--color-gauge-3) 45%, #fff) 0%,
+      var(--color-gauge-3) 60%,
+      color-mix(in srgb, var(--color-gauge-3) 70%, #000) 100%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-gauge-3) 24%, transparent);
 }
 .dial-band-key.band-strong .dial-band-key-dot {
-  background: var(--color-success-muted);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success-muted) 22%, transparent);
+  background:
+    radial-gradient(circle at 35% 30%,
+      color-mix(in srgb, var(--color-gauge-4) 40%, #fff) 0%,
+      var(--color-gauge-4) 60%,
+      color-mix(in srgb, var(--color-gauge-4) 70%, #000) 100%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-gauge-4) 24%, transparent);
 }
 .dial-band-key.band-exceptional .dial-band-key-dot {
-  background: var(--color-success);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success) 20%, transparent);
+  background:
+    radial-gradient(circle at 35% 30%,
+      color-mix(in srgb, var(--color-gauge-5) 50%, #fff) 0%,
+      var(--color-gauge-5) 60%,
+      color-mix(in srgb, var(--color-gauge-5) 70%, #000) 100%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-gauge-5) 24%, transparent);
 }
 .dial-band-key-sep {
   color: var(--color-text-faint);

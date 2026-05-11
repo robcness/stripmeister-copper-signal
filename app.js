@@ -442,7 +442,7 @@ function render() {
     const bandsLine = (bdesc.good && bdesc.strong && bdesc.exceptional)
       ? ` Score bands: under 60 verify conditions, ${watchRange ? `${watchRange} watch and review economics, ` : ''}${bdesc.good.min}\u2013${bdesc.good.max} good time to buy, ${bdesc.strong.min}\u2013${bdesc.strong.max} strong buying window, ${bdesc.exceptional.min} and above exceptional recovery window.`
       : '';
-    setText('dial-desc', `An arched semicircular gauge with four discrete color-coded segments descending from optimal: vivid green for exceptional, muted olive-green for strong, amber copper for good, and burnished copper-brown for watch. Current score ${sig.score} of ${scoreMax} (${labelTxt}). A stylized triangular needle points to the score.${bandsLine}`);
+    setText('dial-desc', `An arched semicircular gauge filled with a continuous metallic copper-to-green gradient descending from optimal: vivid green for exceptional, warm olive-green for strong, amber copper for good, and burnished copper-brown for watch. Threshold ticks keep the segment edges scannable. Current score ${sig.score} of ${scoreMax} (${labelTxt}). A stylized triangular needle points to the score.${bandsLine}`);
     document.querySelectorAll('[data-field="buy-light"]').forEach((el) => {
       el.setAttribute('aria-label', `${labelTxt}. Score ${sig.score} of ${scoreMax}.`);
     });
@@ -492,54 +492,53 @@ function render() {
     // Unit outward normal at angle a. On a circle this is just (cos a, sin a).
     const outwardNormal = (a) => ({ nx: Math.cos(a), ny: Math.sin(a) });
 
-    // --- 1a) Band segment dasharrays --------------------------------------
-    // Each of the four band paths shares the same arc with pathLength=100.
-    // We render only the slice that covers (band.min, band.max) by setting
-    // stroke-dasharray to "0 <startPct> <widthPct> 100". widthPct uses the
-    // exclusive max + 1 (i.e. up to the next band's start) so the colored
-    // strips meet flush at the dividers.
+    // --- 1a) Active-band emphasis overlay ---------------------------------
+    // The new gauge is a CONTINUOUS metallic gradient rather than four
+    // discrete dasharray segments, so per-band stroke-dasharrays are no
+    // longer needed. Instead, we set ONE dasharray on the brighten overlay
+    // (.dial-band-active) so only the segment under the needle gets a soft
+    // highlight tint — the surrounding metallic gradient remains at full
+    // intensity. This preserves the polished-metal continuity while still
+    // drawing the eye to the active band.
+    //
+    // The overlay's slice runs from active.min up to the NEXT band's .min
+    // (or score_max if there is no next band) so it lines up exactly with
+    // the perceived band boundary on the gradient.
     const bandsCfg = sig.bands || {};
     const scoreToPct = (s) => ((s - min) / span) * 100;
-    const setBandDash = (selector, startScore, endScore) => {
-      if (!Number.isFinite(startScore) || !Number.isFinite(endScore)) return;
+    const activeBandKey = sig.band === 'verify' ? 'watch' : sig.band;
+    const bandOrder = ['watch', 'good', 'strong', 'exceptional'];
+    const setActiveDash = (startScore, endScore) => {
       const startPct = Math.max(0, Math.min(100, scoreToPct(startScore)));
       const endPct = Math.max(0, Math.min(100, scoreToPct(endScore)));
       const widthPct = Math.max(0, endPct - startPct);
-      document.querySelectorAll(selector).forEach((el) => {
+      document.querySelectorAll('[data-field="band-active-arc"]').forEach((el) => {
         el.setAttribute('stroke-dasharray', `0 ${startPct} ${widthPct} 100`);
+        el.classList.toggle('is-on', widthPct > 0);
       });
     };
-    // Each band runs from its own .min up to the NEXT band's .min so the
-    // colored strips meet flush at every divider. If a band is missing from
-    // the JSON we fall back to its .max + 1 (which equals the next band's
-    // .min when bands are contiguous) or finally to the previous band's end.
-    const nextMin = (preferred, fallbackMax, prevEnd) => {
-      if (Number.isFinite(preferred)) return preferred;
-      if (Number.isFinite(fallbackMax)) return fallbackMax + 1;
-      return prevEnd;
-    };
-    const watchStart = min;
-    const watchEnd = bandsCfg.good?.min ?? max;
-    const goodStart = bandsCfg.good?.min ?? watchEnd;
-    const goodEnd = nextMin(bandsCfg.strong?.min, bandsCfg.good?.max, goodStart);
-    const strongStart = bandsCfg.strong?.min ?? goodEnd;
-    const strongEnd = nextMin(bandsCfg.exceptional?.min, bandsCfg.strong?.max, strongStart);
-    const excStart = bandsCfg.exceptional?.min ?? strongEnd;
-    const excEnd = max;
-    setBandDash('[data-field="band-watch-arc"]', watchStart, watchEnd);
-    setBandDash('[data-field="band-good-arc"]', goodStart, goodEnd);
-    setBandDash('[data-field="band-strong-arc"]', strongStart, strongEnd);
-    setBandDash('[data-field="band-exceptional-arc"]', excStart, excEnd);
-
-    // Dim the non-active bands so the active segment reads first. The
-    // bandId comes from sig.band ('verify' maps to 'watch' visually since
-    // verify shares the burnished copper-brown segment at the low end).
-    const activeBandKey = sig.band === 'verify' ? 'watch' : sig.band;
-    ['watch', 'good', 'strong', 'exceptional'].forEach((key) => {
-      document.querySelectorAll(`[data-field="band-${key}-arc"]`).forEach((el) => {
-        el.classList.toggle('is-dim', activeBandKey ? key !== activeBandKey : false);
+    if (activeBandKey && bandsCfg[activeBandKey] && typeof bandsCfg[activeBandKey].min === 'number') {
+      // End of the active band = start of the next band, or score_max if
+      // we're already in the top band.
+      const idx = bandOrder.indexOf(activeBandKey);
+      let endScore = max;
+      for (let i = idx + 1; i < bandOrder.length; i += 1) {
+        const next = bandsCfg[bandOrder[i]];
+        if (next && typeof next.min === 'number') { endScore = next.min; break; }
+      }
+      // Fall back to the band's own .max if the next band is missing.
+      if (endScore === max && typeof bandsCfg[activeBandKey].max === 'number'
+        && bandsCfg[activeBandKey].max < max) {
+        endScore = bandsCfg[activeBandKey].max + 1;
+      }
+      setActiveDash(bandsCfg[activeBandKey].min, endScore);
+    } else {
+      // No active band identified — hide the highlight overlay entirely.
+      document.querySelectorAll('[data-field="band-active-arc"]').forEach((el) => {
+        el.setAttribute('stroke-dasharray', '0 0 0 100');
+        el.classList.remove('is-on');
       });
-    });
+    }
 
     // --- 1) Triangle needle ------------------------------------------------
     // Tip lands ON the band stroke at the current score (centerline of the
