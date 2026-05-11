@@ -91,96 +91,85 @@
 
             <div class="dial-wrap" aria-label="Buying signal — see score readout below." data-field="dial-wrap">
               <!--
-                Oval gradient gauge. Geometry:
-                  - viewBox 0 0 320 170 (low, wide ratio ~1.88:1)
-                  - Upper half of an ellipse cx=160 cy=130 rx=140 ry=42
-                  - Score 60..100 maps linearly to arc angle 180°..360°
-                A continuous SVG linearGradient runs left-to-right across the
-                score range. Faint vertical divider lines at 60 / 78 / 85 / 92
-                / 100 overlay the gradient so the eye can still read the band
-                thresholds. All ticks/labels/needle are redrawn by app.js once
-                signal.bands hydrate; static defaults below keep the gauge
-                legible for the no-JS / first-paint case (score 96, exceptional).
+                Arched stoplight gauge. Geometry:
+                  - viewBox 0 0 320 200
+                  - Upper half of a circle, cx=160 cy=170 r=120 (path: M40 170 A120 120 0 0 1 280 170)
+                  - Score 60..100 maps linearly to arc angle 180°..360° (left pole → right pole)
+                Instead of a continuous gradient, four DISCRETE colored segments
+                share the same arc path and are sliced via stroke-dasharray on
+                pathLength=100 (so band edge % equals (score-60)/40 · 100).
+                Stoplight palette descending from optimal: vivid green (92+),
+                muted olive-green (85–91), amber copper (78–84), burnished
+                copper-brown (60–77 watch and sub-60 verify). No rainbow, no
+                warning red — StripMeister already owns red. Faint divider lines
+                and threshold numerics overlay the segments. The needle is a
+                stylized elongated triangle (kept from the previous draft) so
+                the user-preferred needle silhouette stays the same.
+                Static defaults below assume score 96 (exceptional) and the
+                60/78/85/92 thresholds so the gauge is legible for the no-JS /
+                first-paint case; app.js rewires from signal.bands on hydration.
               -->
-              <svg class="dial-svg" viewBox="0 0 320 170" role="img" aria-labelledby="dial-title dial-desc">
-                <title id="dial-title">Copper recovery buying signal — oval gradient gauge</title>
-                <desc id="dial-desc" data-field="dial-desc">A low, wide oval gauge. A continuous color gradient runs across the score path from a cautious amber at the low end, through copper in the mid range, to a vivid green at the high end. Faint divider lines mark the band thresholds at 60, 78, 85, 92, and 100. Score bands: under 60 verify conditions, 60 to 77 watch and review economics, 78 to 84 good time to buy, 85 to 91 strong buying window, 92 and above exceptional recovery window. A stylized triangular needle marks the current score.</desc>
+              <svg class="dial-svg" viewBox="0 0 320 200" role="img" aria-labelledby="dial-title dial-desc">
+                <title id="dial-title">Copper recovery buying signal — arched stoplight gauge</title>
+                <desc id="dial-desc" data-field="dial-desc">An arched semicircular gauge with four discrete color-coded segments descending from optimal: vivid green for 92 and above (exceptional recovery window), muted olive-green for 85 to 91 (strong buying window), amber copper for 78 to 84 (good time to buy), and burnished copper-brown for 60 to 77 (watch and review economics). Below 60 verify conditions. Threshold ticks at 60, 78, 85, 92, and 100. A stylized triangular needle marks the current score.</desc>
 
-                <defs>
-                  <!--
-                    Continuous score-path gradient. Stop positions are derived
-                    from band thresholds across the visible score range 60..100
-                    (score 60 = 0%, score 100 = 100%):
-                       60  →  0%   warning / amber (watch & review)
-                       77  → 42.5% amber tail (still cautious)
-                       78  → 45%   muted copper (good)
-                       85  → 62.5% copper (strong)
-                       92  → 80%   transition to success
-                      100  → 100%  vivid success green (exceptional)
-                    Colors come from CSS custom properties so light/dark themes
-                    update the gradient without JS.
-                  -->
-                  <!--
-                    stop-color is set via CSS (style.css → .dial-gradient-arc stops)
-                    so light/dark theme variables propagate without JS. Each stop
-                    carries a data-stop key the stylesheet targets.
-                  -->
-                  <linearGradient id="dial-gradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop class="dial-stop dial-stop-watch-a" offset="0%" />
-                    <stop class="dial-stop dial-stop-watch-b" offset="42.5%" />
-                    <stop class="dial-stop dial-stop-good"    offset="45%" />
-                    <stop class="dial-stop dial-stop-strong"  offset="62.5%" />
-                    <stop class="dial-stop dial-stop-exc-a"   offset="80%" />
-                    <stop class="dial-stop dial-stop-exc-b"   offset="92%" />
-                    <stop class="dial-stop dial-stop-exc-c"   offset="100%" />
-                  </linearGradient>
-                </defs>
+                <!-- background track: full neutral arc behind the bands so the
+                     gauge remains visible if any band path fails to paint. -->
+                <path class="dial-track" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" />
 
-                <!-- background track: thin neutral lane behind the gradient so the arc
-                     remains visible if the gradient ever fails to paint. -->
-                <path class="dial-track" d="M20 130 A140 42 0 0 1 300 130" pathLength="100" />
+                <!--
+                  Banded segments. Each band shares the same arc path with
+                  pathLength=100 and uses stroke-dasharray to render only its
+                  slice. dasharray format: "0 <gap> <visible> <pad>" where gap
+                  is the band's start percent and visible is the band's width.
+                  Static defaults for score range 60..100 with thresholds at
+                  60/78/85/92/100:
+                    watch       60–77   →  0%–45%   → dasharray 0 0 45 100
+                    good        78–84   → 45%–62.5% → dasharray 0 45 17.5 100
+                    strong      85–91   → 62.5%–80% → dasharray 0 62.5 17.5 100
+                    exceptional 92+     → 80%–100%  → dasharray 0 80 20 100
+                -->
+                <path class="dial-band band-watch"       data-field="band-watch-arc"       d="M40 170 A120 120 0 0 1 280 170" pathLength="100" stroke-dasharray="0 0 45 100" />
+                <path class="dial-band band-good"        data-field="band-good-arc"        d="M40 170 A120 120 0 0 1 280 170" pathLength="100" stroke-dasharray="0 45 17.5 100" />
+                <path class="dial-band band-strong"      data-field="band-strong-arc"      d="M40 170 A120 120 0 0 1 280 170" pathLength="100" stroke-dasharray="0 62.5 17.5 100" />
+                <path class="dial-band band-exceptional" data-field="band-exceptional-arc" d="M40 170 A120 120 0 0 1 280 170" pathLength="100" stroke-dasharray="0 80 20 100" />
 
-                <!-- Continuous gradient stroke across the full visible score path. -->
-                <path class="dial-gradient-arc" d="M20 130 A140 42 0 0 1 300 130" pathLength="100" />
-
-                <!-- Band divider overlay lines. Each segment line sits across the
-                     gradient at a band threshold (60, 78, 85, 92, 100). app.js
-                     redraws these from signal.bands so future tweaks to thresholds
-                     in JSON propagate automatically. Static fallback uses the
-                     78/85/92 boundary positions on the ellipse. -->
+                <!-- Band divider overlay lines. Each line sits across the arc
+                     stroke at an internal band threshold (78, 85, 92) so the
+                     segment seams remain visually crisp. app.js redraws these
+                     from signal.bands on hydration. -->
                 <g class="dial-dividers" data-field="dial-dividers" aria-hidden="true">
-                  <line x1="138.1" y1="77.5" x2="138.1" y2="99.5" />
-                  <line x1="213.6" y1="80.2" x2="213.6" y2="102.2" />
-                  <line x1="273.3" y1="94.3" x2="273.3" y2="116.3" />
+                  <line x1="143.0" y1="62.3" x2="139.5" y2="40.6" />
+                  <line x1="201.7" y1="69.3" x2="210.1" y2="49.0" />
+                  <line x1="248.2" y1="105.9" x2="266.0" y2="93.0" />
                 </g>
 
                 <!-- Outer threshold tick marks at band edges plus numeric labels.
-                     Static defaults are positioned for the ellipse cx=160 cy=130
-                     rx=140 ry=42 with score range 60..100. app.js redraws on hydration. -->
+                     Static defaults are positioned for cx=160 cy=170 r=120 with
+                     score range 60..100. app.js redraws on hydration. -->
                 <g class="dial-ticks" data-field="dial-ticks" aria-hidden="true">
-                  <line x1="20.0" y1="130.0" x2="5.0" y2="130.0" />
-                  <line x1="138.1" y1="88.5" x2="137.5" y2="73.5" />
-                  <line x1="213.6" y1="91.2" x2="215.6" y2="76.4" />
-                  <line x1="273.3" y1="105.3" x2="281.8" y2="92.9" />
-                  <line x1="300.0" y1="130.0" x2="315.0" y2="130.0" />
+                  <line x1="51.0" y1="170.0" x2="29.0" y2="170.0" />
+                  <line x1="143.0" y1="62.3" x2="139.5" y2="40.6" />
+                  <line x1="201.7" y1="69.3" x2="210.1" y2="49.0" />
+                  <line x1="248.2" y1="105.9" x2="266.0" y2="93.0" />
+                  <line x1="269.0" y1="170.0" x2="291.0" y2="170.0" />
                 </g>
                 <g class="dial-tick-labels" data-field="dial-tick-labels" aria-hidden="true">
-                  <text x="-5.0" y="130.0">60</text>
-                  <text x="137.0" y="63.0">78</text>
-                  <text x="218.0" y="66.0">85</text>
-                  <text x="289.0" y="86.0">92</text>
-                  <text x="325.0" y="130.0">100</text>
+                  <text x="12.0" y="170.0">60</text>
+                  <text x="136.8" y="23.8">78</text>
+                  <text x="216.6" y="33.3">85</text>
+                  <text x="279.7" y="83.0">92</text>
+                  <text x="308.0" y="170.0">100</text>
                 </g>
 
-                <!-- Stylized triangular needle. The triangle's tip lands on the
-                     gradient path at the current score; the wide base sits low and
-                     centered on the hub. Static default points to score 96
-                     (exceptional). app.js rotates/repositions on hydration.
-                     We draw the needle as a single <polygon> so the triangle
-                     stays crisp as it rotates. -->
+                <!-- Stylized elongated triangle needle. Tip lands on the band
+                     path at the current score; wide base sits on the hub at
+                     (160, 185). Static default points to score 96 (exceptional).
+                     app.js rotates/repositions on hydration. Drawn as a single
+                     <polygon> so the triangle stays crisp at any rotation. -->
                 <g class="dial-needle" data-field="dial-needle">
-                  <polygon class="dial-needle-tri" data-field="dial-needle-tri" points="160,145 154,151 293.2,117.0 166,151" />
-                  <circle cx="160" cy="150" r="7" class="dial-hub" />
+                  <polygon class="dial-needle-tri" data-field="dial-needle-tri" points="162.5,190.5 163.6,183.3 157.5,179.5 274.1,132.9" />
+                  <circle cx="160" cy="185" r="8" class="dial-hub" />
                 </g>
               </svg>
 

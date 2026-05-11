@@ -442,23 +442,22 @@ function render() {
     const bandsLine = (bdesc.good && bdesc.strong && bdesc.exceptional)
       ? ` Score bands: under 60 verify conditions, ${watchRange ? `${watchRange} watch and review economics, ` : ''}${bdesc.good.min}\u2013${bdesc.good.max} good time to buy, ${bdesc.strong.min}\u2013${bdesc.strong.max} strong buying window, ${bdesc.exceptional.min} and above exceptional recovery window.`
       : '';
-    setText('dial-desc', `A low, wide oval gauge with a continuous color gradient across the score path and divider lines at the band thresholds. Current score ${sig.score} of ${scoreMax} (${labelTxt}). A stylized triangular needle points to the score.${bandsLine}`);
+    setText('dial-desc', `An arched semicircular gauge with four discrete color-coded segments descending from optimal: vivid green for exceptional, muted olive-green for strong, amber copper for good, and burnished copper-brown for watch. Current score ${sig.score} of ${scoreMax} (${labelTxt}). A stylized triangular needle points to the score.${bandsLine}`);
     document.querySelectorAll('[data-field="buy-light"]').forEach((el) => {
       el.setAttribute('aria-label', `${labelTxt}. Score ${sig.score} of ${scoreMax}.`);
     });
   }
 
-  // === Oval gradient gauge: needle + divider overlay + tick labels + legend
+  // === Arched stoplight gauge: bands + needle + dividers + ticks + legend
   //
   // Geometry (must match index.html / style.css):
-  //   - Upper half of an ellipse cx=160 cy=130 rx=140 ry=42
+  //   - Upper half of a circle, cx=160 cy=170 r=120
   //   - Score range [min, max] maps linearly to parametric angle 180°..360°
   //   - Score 60 = left pole (a=180°); score 100 = right pole (a=360°)
   // For each threshold/score s with t = (s - min)/(max - min):
   //   a = 180° + t * 180°  (radians: pi + t*pi)
-  //   pointOnArc(s) = (cx + rx*cos(a), cy + ry*sin(a))
-  // The unit outward normal to the ellipse at angle a is the normalized
-  // gradient of the implicit equation: (cos(a)/rx, sin(a)/ry) normalized.
+  //   pointOnArc(s) = (cx + r*cos(a), cy + r*sin(a))
+  // For a circle the unit outward normal at angle a is simply (cos a, sin a).
   // We reuse that normal to (1) place ticks outside the stroke, (2) draw
   // divider overlays across the stroke, and (3) shape the triangular
   // needle from a hub at the bottom-center of the dial.
@@ -468,48 +467,87 @@ function render() {
     const span = Math.max(1, max - min);
     const clamped = Math.min(max, Math.max(min, sig.score));
 
-    // Ellipse geometry constants (mirror index.html and style.css).
+    // Circle geometry constants (mirror index.html and style.css).
     const cx = 160;
-    const cy = 130;
-    const rx = 140;
-    const ry = 42;
-    const strokeHalf = 11; // half of dial-gradient-arc stroke-width (22)
+    const cy = 170;
+    const r = 120;
+    const strokeHalf = 11; // half of dial-band stroke-width (22)
 
-    // Convert a score value to its parametric angle on the upper-half ellipse.
+    // Convert a score value to its parametric angle on the upper-half circle.
     const scoreToAngle = (s) => {
       const tt = (s - min) / span;
       return Math.PI + tt * Math.PI; // radians, 180°..360°
     };
 
-    // Point on the gradient arc for score s.
+    // Point on the band arc for score s.
     const pointOnArc = (s) => {
       const a = scoreToAngle(s);
       return {
-        x: cx + rx * Math.cos(a),
-        y: cy + ry * Math.sin(a),
+        x: cx + r * Math.cos(a),
+        y: cy + r * Math.sin(a),
         a,
       };
     };
 
-    // Unit outward normal to the ellipse at parametric angle a.
-    // The outward normal of (cx + rx cos a, cy + ry sin a) is proportional
-    // to (cos a / rx, sin a / ry). For the upper half (sin a < 0) this
-    // points up-and-out, which is what we want for ticks and divider
-    // direction.
-    const outwardNormal = (a) => {
-      const nx = Math.cos(a) / rx;
-      const ny = Math.sin(a) / ry;
-      const mag = Math.hypot(nx, ny) || 1;
-      return { nx: nx / mag, ny: ny / mag };
+    // Unit outward normal at angle a. On a circle this is just (cos a, sin a).
+    const outwardNormal = (a) => ({ nx: Math.cos(a), ny: Math.sin(a) });
+
+    // --- 1a) Band segment dasharrays --------------------------------------
+    // Each of the four band paths shares the same arc with pathLength=100.
+    // We render only the slice that covers (band.min, band.max) by setting
+    // stroke-dasharray to "0 <startPct> <widthPct> 100". widthPct uses the
+    // exclusive max + 1 (i.e. up to the next band's start) so the colored
+    // strips meet flush at the dividers.
+    const bandsCfg = sig.bands || {};
+    const scoreToPct = (s) => ((s - min) / span) * 100;
+    const setBandDash = (selector, startScore, endScore) => {
+      if (!Number.isFinite(startScore) || !Number.isFinite(endScore)) return;
+      const startPct = Math.max(0, Math.min(100, scoreToPct(startScore)));
+      const endPct = Math.max(0, Math.min(100, scoreToPct(endScore)));
+      const widthPct = Math.max(0, endPct - startPct);
+      document.querySelectorAll(selector).forEach((el) => {
+        el.setAttribute('stroke-dasharray', `0 ${startPct} ${widthPct} 100`);
+      });
     };
+    // Each band runs from its own .min up to the NEXT band's .min so the
+    // colored strips meet flush at every divider. If a band is missing from
+    // the JSON we fall back to its .max + 1 (which equals the next band's
+    // .min when bands are contiguous) or finally to the previous band's end.
+    const nextMin = (preferred, fallbackMax, prevEnd) => {
+      if (Number.isFinite(preferred)) return preferred;
+      if (Number.isFinite(fallbackMax)) return fallbackMax + 1;
+      return prevEnd;
+    };
+    const watchStart = min;
+    const watchEnd = bandsCfg.good?.min ?? max;
+    const goodStart = bandsCfg.good?.min ?? watchEnd;
+    const goodEnd = nextMin(bandsCfg.strong?.min, bandsCfg.good?.max, goodStart);
+    const strongStart = bandsCfg.strong?.min ?? goodEnd;
+    const strongEnd = nextMin(bandsCfg.exceptional?.min, bandsCfg.strong?.max, strongStart);
+    const excStart = bandsCfg.exceptional?.min ?? strongEnd;
+    const excEnd = max;
+    setBandDash('[data-field="band-watch-arc"]', watchStart, watchEnd);
+    setBandDash('[data-field="band-good-arc"]', goodStart, goodEnd);
+    setBandDash('[data-field="band-strong-arc"]', strongStart, strongEnd);
+    setBandDash('[data-field="band-exceptional-arc"]', excStart, excEnd);
+
+    // Dim the non-active bands so the active segment reads first. The
+    // bandId comes from sig.band ('verify' maps to 'watch' visually since
+    // verify shares the burnished copper-brown segment at the low end).
+    const activeBandKey = sig.band === 'verify' ? 'watch' : sig.band;
+    ['watch', 'good', 'strong', 'exceptional'].forEach((key) => {
+      document.querySelectorAll(`[data-field="band-${key}-arc"]`).forEach((el) => {
+        el.classList.toggle('is-dim', activeBandKey ? key !== activeBandKey : false);
+      });
+    });
 
     // --- 1) Triangle needle ------------------------------------------------
-    // Tip lands ON the gradient stroke at the current score (centerline of
-    // the stroke band). Base sits on a hub at (160, 150) below the dial.
-    // The triangle has a short flat back-edge so it reads as a stylized
+    // Tip lands ON the band stroke at the current score (centerline of the
+    // stroke band). Base sits on a hub at (160, 185) below the arc midline.
+    // The triangle has a short notched back-edge so it reads as a stylized
     // arrow head rather than a generic gauge sliver.
     const tip = pointOnArc(clamped);
-    const hubX = 160, hubY = 150;
+    const hubX = 160, hubY = 185;
     // Direction from hub to tip.
     const dx = tip.x - hubX;
     const dy = tip.y - hubY;
@@ -550,12 +588,11 @@ function render() {
 
     // --- 2) Band divider overlay lines -------------------------------------
     // Draw a short radial line across the stroke at each *internal* band
-    // threshold. The continuous gradient supplies the band color cue; the
-    // divider lines supply the threshold cue without breaking the gradient
-    // into solid blocks. We skip the endpoints (min and max) because they
-    // sit at the gradient's pole positions and would otherwise look like
-    // truncation marks.
-    const bandsCfg = sig.bands || {};
+    // threshold. The four discrete segments already supply the band color
+    // cue; the divider lines reinforce the seams with a thin contrast tick
+    // so the boundary reads even when the active band is dimmed. Endpoints
+    // (min and max) are skipped because they sit at the arc's pole positions
+    // and would otherwise look like truncation marks.
     const dividersGroup = document.querySelector('[data-field="dial-dividers"]');
     if (dividersGroup) {
       while (dividersGroup.firstChild) dividersGroup.removeChild(dividersGroup.firstChild);
@@ -634,9 +671,11 @@ function render() {
 
     // --- 4) Band legend chips (data-driven from signal.bands) -------------
     // The markup ships with FOUR legend keys in order: watch / good / strong
-    // / exceptional. We don't show a 'verify' chip in the legend because the
+    // / exceptional — matching the four stoplight segments in the arc above.
+    // We don't show a separate 'verify' chip in the legend because the
     // published score is always >= 60; the desc text names verify for
     // screen-reader users so the category isn't hidden, just not chip-listed.
+    // This keeps the legend row uncluttered and professional.
     const legend = document.querySelector('[data-field="dial-band-legend"]');
     if (legend && bandsCfg.good && bandsCfg.strong && bandsCfg.exceptional) {
       const keys = legend.querySelectorAll('.dial-band-key');

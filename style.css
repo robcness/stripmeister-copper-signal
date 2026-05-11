@@ -34,6 +34,10 @@
 
   --color-success: #2f8260;
   --color-success-tint: rgba(47, 130, 96, 0.14);
+  /* Muted warm/olive green — the "strong" stoplight band. Sits between the
+     vivid optimal green and the copper amber so the four-color stoplight
+     reads as one continuous descent rather than a rainbow. */
+  --color-success-muted: #6b8a3a;
   --color-warning: #b8791b;
   --color-risk: #c93636;
 
@@ -92,6 +96,8 @@
 
   --color-success: #4cb487;
   --color-success-tint: rgba(76, 180, 135, 0.16);
+  /* Muted olive-green for the "strong" band on dark surfaces. */
+  --color-success-muted: #9bb05a;
   --color-warning: #d39a35;
   --color-risk: #e45c57;
 
@@ -633,13 +639,17 @@ p { color: var(--color-text-muted); }
   color: var(--color-copper);
 }
 
-/* === Oval gradient dial =================================================
-   The gauge is a low, wide ellipse (rx=140, ry=42) instead of a half-circle.
-   The score path is rendered as a single continuous linear-gradient stroke,
-   with thin overlay divider lines at the band thresholds. The needle is a
-   stylized elongated triangle drawn as a single <polygon> so it rotates
-   crisply. All band colors come from --color-warning / --color-copper* /
-   --color-success so light/dark themes propagate without JS. */
+/* === Arched stoplight dial =============================================
+   The gauge is a half-circle (radius 120, center cx=160 cy=170) rendered as
+   four DISCRETE colored segments rather than a continuous gradient. The
+   palette descends from the optimal green band through olive-green and
+   amber-copper into a burnished copper-brown at the cautious end — a
+   stoplight read inside the copper hue, with no harsh red (StripMeister
+   already owns red) and no rainbow look. Visible divider lines and threshold
+   numerics overlay the bands so the eye can read both color and value.
+   The needle is a stylized elongated triangle drawn as a single <polygon>
+   so it stays crisp at any rotation. All segment colors come from CSS custom
+   properties so light/dark themes propagate without JS. */
 .dial-wrap {
   position: relative;
   max-width: 32rem;
@@ -663,37 +673,49 @@ p { color: var(--color-text-muted); }
   stroke-linecap: butt;
 }
 
-/* Gradient stops driven by theme variables. Setting via CSS (instead of
-   stop-color="var(--...)") is the path that works reliably across browsers.
-   Stops correspond to the score thresholds documented in index.html. */
-.dial-stop-watch-a { stop-color: var(--color-warning); stop-opacity: 1; }
-.dial-stop-watch-b { stop-color: var(--color-warning); stop-opacity: 0.92; }
-.dial-stop-good    { stop-color: var(--color-copper-light); stop-opacity: 1; }
-.dial-stop-strong  { stop-color: var(--color-copper); stop-opacity: 1; }
-.dial-stop-exc-a   { stop-color: var(--color-copper-bright); stop-opacity: 1; }
-.dial-stop-exc-b   { stop-color: var(--color-success); stop-opacity: 1; }
-.dial-stop-exc-c   { stop-color: var(--color-success); stop-opacity: 1; }
-
-/* Continuous score-path stroke painted with the linear gradient. */
-.dial-gradient-arc {
+/* Four discrete band segments rendered on the same arc path using
+   stroke-dasharray on pathLength=100. app.js sets each dasharray from
+   signal.bands so band edges always match the JSON thresholds. The static
+   HTML defaults assume 60/78/85/92 thresholds. */
+.dial-band {
   fill: none;
-  stroke: url(#dial-gradient);
   stroke-width: 22;
   stroke-linecap: butt;
-  filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--color-copper-deep) 24%, transparent));
+  transition: stroke-dasharray 240ms ease-out, opacity 200ms ease;
+  opacity: 1;
 }
 
-/* Faint divider lines layered on the gradient so the band thresholds remain
-   visually scannable. Lines run across the stroke (radial), not along it,
-   and use a contrast-aware tone so they read in both themes. */
+/* Stoplight palette — four colors descending from optimal: vivid green,
+   muted olive-green, amber copper, burnished copper-brown. No rainbow,
+   no warning red. */
+.dial-band.band-watch {
+  stroke: var(--color-copper-deep);
+}
+.dial-band.band-good {
+  stroke: var(--color-copper-bright);
+}
+.dial-band.band-strong {
+  stroke: var(--color-success-muted);
+}
+.dial-band.band-exceptional {
+  stroke: var(--color-success);
+  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--color-success) 28%, transparent));
+}
+
+/* When the live data identifies which band is active, dim the others so
+   the eye snaps to the current band without losing the threshold context. */
+.dial-band.is-dim { opacity: 0.4; }
+
+/* Faint divider lines layered across the segment seams so the band
+   thresholds remain visually scannable even at low contrast. */
 .dial-dividers line {
-  stroke: color-mix(in srgb, var(--color-bg) 78%, var(--color-text) 22%);
+  stroke: color-mix(in srgb, var(--color-bg) 70%, var(--color-text) 30%);
   stroke-width: 1.5;
   stroke-linecap: round;
   opacity: 0.85;
 }
 [data-theme='light'] .dial-dividers line {
-  stroke: color-mix(in srgb, var(--color-bg) 60%, var(--color-text) 40%);
+  stroke: color-mix(in srgb, var(--color-bg) 55%, var(--color-text) 45%);
   opacity: 0.6;
 }
 
@@ -719,9 +741,9 @@ p { color: var(--color-text-muted); }
 }
 
 /* Stylized elongated triangle needle. The polygon is drawn with the tip
-   pointing at the current score on the gradient path; the wide base sits
-   on the hub. A thin stroke + drop-shadow keeps the triangle crisp on top
-   of the gradient regardless of which band it's pointing at. */
+   pointing at the current score on the band path; the wide base sits on
+   the hub. A thin stroke + drop-shadow keeps the triangle crisp on top of
+   any band color regardless of which segment it's pointing at. */
 .dial-needle-tri {
   fill: var(--color-text);
   stroke: color-mix(in srgb, var(--color-bg) 60%, transparent);
@@ -752,10 +774,10 @@ p { color: var(--color-text-muted); }
 .dial-readout {
   display: flex;
   justify-content: center;
-  /* The oval gauge is shorter than the half-circle was, so the readout pill
-     sits closer to the gauge with a smaller negative pull. Keeping it in
-     normal flow guarantees the band legend below never collides. */
-  margin-top: calc(-1 * var(--space-3));
+  /* Half-circle arc empties out below its midline. Pull the readout pill up
+     into that empty space so it sits tucked under the arc's curve, while
+     still leaving room for the band legend underneath. */
+  margin-top: calc(-1 * var(--space-6));
   position: relative;
   z-index: 1;
 }
@@ -820,35 +842,37 @@ p { color: var(--color-text-muted); }
   letter-spacing: 0.06em;
 }
 
-/* Band-aware variants:
-     verify (< 60)   = amber, conservative — "Verify conditions"
-     watch  (60–77) = amber, conservative — "Watch & review economics"
-     good   (78–84) = amber
-     strong (85–91) = copper
-     exceptional (92+) = green (default green styling above)
-   verify and watch share the same amber treatment so both sub-78 categories
-   read as "not yet a buy" without using the discouraged "Wait" language. */
+/* Band-aware readout variants. The pill mirrors the gauge palette so the
+   readout color always matches the segment the needle is pointing to.
+     verify (< 60)   = burnished copper-brown   — "Verify conditions"
+     watch  (60–77) = burnished copper-brown   — "Watch & review economics"
+     good   (78–84) = amber copper             — "Good time to buy"
+     strong (85–91) = muted olive-green        — "Strong buying window"
+     exceptional (92+) = vivid green            — "Exceptional recovery window"
+   Verify and watch share the burnished copper-brown treatment so both
+   sub-78 categories read as "not yet a buy" without using "Wait" language
+   and without invoking the StripMeister brand red. */
 .buy-light.band-verify,
 .buy-light.band-watch,
 .buy-light.band-hold {
-  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+  background: color-mix(in srgb, var(--color-copper-deep) 16%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-copper-deep) 50%, transparent);
 }
 .buy-light.band-verify .buy-light-dot,
 .buy-light.band-watch .buy-light-dot,
 .buy-light.band-hold .buy-light-dot {
   background: radial-gradient(
     circle at 35% 30%,
-    color-mix(in srgb, var(--color-warning) 40%, #fff) 0%,
-    var(--color-warning) 55%,
-    color-mix(in srgb, var(--color-warning) 60%, #000) 100%
+    color-mix(in srgb, var(--color-copper-deep) 30%, #fff) 0%,
+    var(--color-copper-deep) 55%,
+    color-mix(in srgb, var(--color-copper-deep) 70%, #000) 100%
   );
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-copper-deep) 20%, transparent);
 }
 .buy-light.band-verify .buy-light-score,
 .buy-light.band-watch .buy-light-score,
 .buy-light.band-hold .buy-light-score {
-  border-left-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+  border-left-color: color-mix(in srgb, var(--color-copper-deep) 40%, transparent);
 }
 
 .buy-light.band-exceptional {
@@ -856,40 +880,40 @@ p { color: var(--color-text-muted); }
   border-color: color-mix(in srgb, var(--color-success) 60%, transparent);
 }
 
-/* Active-band variant for the "good" range — uses the same amber as the arc segment. */
+/* "Good" range — amber-copper, the third step in the descent. */
 .buy-light.band-good {
-  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+  background: color-mix(in srgb, var(--color-copper-bright) 18%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-copper-bright) 50%, transparent);
 }
 .buy-light.band-good .buy-light-dot {
   background: radial-gradient(
     circle at 35% 30%,
-    color-mix(in srgb, var(--color-warning) 40%, #fff) 0%,
-    var(--color-warning) 55%,
-    color-mix(in srgb, var(--color-warning) 60%, #000) 100%
+    color-mix(in srgb, var(--color-copper-bright) 35%, #fff) 0%,
+    var(--color-copper-bright) 55%,
+    color-mix(in srgb, var(--color-copper-bright) 70%, #000) 100%
   );
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-copper-bright) 22%, transparent);
 }
 .buy-light.band-good .buy-light-score {
-  border-left-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+  border-left-color: color-mix(in srgb, var(--color-copper-bright) 40%, transparent);
 }
 
-/* "Strong" range — uses copper as the active accent so the brand metal still shows up. */
+/* "Strong" range — muted olive-green, the second step from the top. */
 .buy-light.band-strong {
-  background: color-mix(in srgb, var(--color-copper) 18%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-copper) 55%, transparent);
+  background: color-mix(in srgb, var(--color-success-muted) 18%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-success-muted) 55%, transparent);
 }
 .buy-light.band-strong .buy-light-dot {
   background: radial-gradient(
     circle at 35% 30%,
-    var(--color-copper-light) 0%,
-    var(--color-copper) 55%,
-    var(--color-copper-deep) 100%
+    color-mix(in srgb, var(--color-success-muted) 30%, #fff) 0%,
+    var(--color-success-muted) 55%,
+    color-mix(in srgb, var(--color-success-muted) 70%, #000) 100%
   );
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-copper) 22%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success-muted) 22%, transparent);
 }
 .buy-light.band-strong .buy-light-score {
-  border-left-color: color-mix(in srgb, var(--color-copper) 40%, transparent);
+  border-left-color: color-mix(in srgb, var(--color-success-muted) 40%, transparent);
 }
 
 /* === Compact band legend beneath the gauge =============================== */
@@ -944,18 +968,23 @@ p { color: var(--color-text-muted); }
   border-radius: 999px;
   flex-shrink: 0;
 }
+/* Legend dots track the four stoplight steps exactly. verify and watch share
+   the burnished copper-brown dot — because the published score is floored at
+   60 we don't ship a separate 'verify' chip in the legend (it would clutter
+   the row for a band the user rarely sees). Verify is still named in the
+   screen-reader desc above so the category isn't hidden, just not chip-listed. */
 .dial-band-key.band-verify .dial-band-key-dot,
 .dial-band-key.band-watch .dial-band-key-dot {
-  background: color-mix(in srgb, var(--color-warning) 78%, var(--color-text-faint));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-warning) 18%, transparent);
+  background: var(--color-copper-deep);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-copper-deep) 20%, transparent);
 }
 .dial-band-key.band-good .dial-band-key-dot {
-  background: var(--color-warning);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-warning) 20%, transparent);
+  background: var(--color-copper-bright);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-copper-bright) 22%, transparent);
 }
 .dial-band-key.band-strong .dial-band-key-dot {
-  background: var(--color-copper);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-copper) 20%, transparent);
+  background: var(--color-success-muted);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success-muted) 22%, transparent);
 }
 .dial-band-key.band-exceptional .dial-band-key-dot {
   background: var(--color-success);
