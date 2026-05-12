@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-11T21:51:05.427Z",
-  "last_updated": "2026-05-11",
-  "last_checked": "2026-05-11T21:51:05.427Z",
+  "generated_at": "2026-05-12T16:00:56.519Z",
+  "last_updated": "2026-05-12",
+  "last_checked": "2026-05-12T16:00:56.519Z",
   "copper": {
     "reference_price_usd_per_lb": 6.4915,
     "as_of_date": "2026-05-11",
@@ -48,11 +48,11 @@
     "delta_1d_pct": 3.88,
     "delta_5d_pct": 12.02,
     "since_last_refresh": {
-      "previous_price_usd_per_lb": 6.191,
-      "previous_generated_at": "2026-05-11T21:50:18.331Z",
-      "delta_usd_per_lb": 0.3005,
-      "delta_pct": 4.85,
-      "status": "positive"
+      "previous_price_usd_per_lb": 6.4915,
+      "previous_generated_at": "2026-05-11T21:51:05.427Z",
+      "delta_usd_per_lb": 0,
+      "delta_pct": 0,
+      "status": "flat"
     }
   },
   "scrap": {
@@ -76,10 +76,20 @@
       "short_term_risk": 0.2
     },
     "score_min_published": 60,
-    "previous_score": 87,
-    "score_delta": 9,
+    "previous_score": 96,
+    "score_delta": 0,
     "band": "exceptional",
     "bands": {
+      "verify": {
+        "min": 0,
+        "max": 59,
+        "label": "Verify conditions"
+      },
+      "watch": {
+        "min": 60,
+        "max": 77,
+        "label": "Watch & review economics"
+      },
       "good": {
         "min": 78,
         "max": 84,
@@ -208,6 +218,6 @@
     "bare_bright": "manual",
     "insulated_wire": "manual",
     "fx_usd_cad": "bank-of-canada",
-    "notes": "Live fetch attempted via Yahoo Finance HG=F and Bank of Canada Valet (FXUSDCAD). Scrap reference values are manual by design — see scripts/update-copper-data.mjs header for rationale."
+    "notes": "Timestamps only. Set FETCH_SOURCES=1 to attempt live copper + FX fetch. Scrap values stay manual."
   }
 }
