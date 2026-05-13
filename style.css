@@ -452,6 +452,20 @@ p { color: var(--color-text-muted); }
   text-align: right;
 }
 
+/* Subtle middot separator and "Last updated" caption.
+   Same color/size as the surrounding caption (intentionally quiet);
+   `font-variant-numeric: tabular-nums` keeps the time digits aligned
+   so the line doesn't shift width when the timestamp re-renders. */
+.currency-toolbar-meta-sep {
+  color: color-mix(in srgb, var(--color-text-faint) 70%, transparent);
+}
+
+.currency-toolbar-meta-updated {
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
 @media (max-width: 560px) {
   .currency-toolbar {
     gap: var(--space-2);
@@ -459,6 +473,17 @@ p { color: var(--color-text-muted); }
   .currency-toolbar-meta {
     flex-basis: 100%;
     text-align: left;
+  }
+  /* On narrow viewports the caption already wraps to its own line; hide
+     the inline middot and let the "Last updated" line break naturally so
+     long timestamps never push past the toolbar edge. */
+  .currency-toolbar-meta-sep {
+    display: none;
+  }
+  .currency-toolbar-meta-updated {
+    display: block;
+    margin-top: 2px;
+    white-space: normal;
   }
 }
 

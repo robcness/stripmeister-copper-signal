@@ -75,6 +75,86 @@ function fmtSignedPct(n, dp = 2) {
   return `${sign}${n.toFixed(dp)}%`;
 }
 
+// Format the "Last updated" caption.
+//
+// Preference order:
+//   1. `generated_at`   — ISO timestamp, formatted in Eastern time with the
+//                         live EST/EDT abbreviation derived from the date.
+//   2. `last_updated`   — date-only string (YYYY-MM-DD); formatted as a date
+//                         with no clock time.
+//   3. `last_checked`   — last-resort ISO timestamp fallback.
+// Returns null when no usable value is present so callers can leave the
+// existing static fallback in place rather than wiping it.
+function fmtLastUpdated(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  // 1) Prefer the precise generation timestamp.
+  const isoTs = typeof data.generated_at === 'string' ? data.generated_at : null;
+  const fallbackTs = typeof data.last_checked === 'string' ? data.last_checked : null;
+  const ts = isoTs || fallbackTs;
+  if (ts) {
+    const d = new Date(ts);
+    if (!Number.isNaN(d.getTime())) {
+      try {
+        const dateTxt = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }).format(d);
+        const timeTxt = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        }).format(d);
+        // Derive EST vs EDT from the actual offset on that date so we never
+        // mislabel the timezone across the DST boundary. Use a generic "ET"
+        // fallback if the runtime cannot produce a timeZoneName part.
+        let tz = 'ET';
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            timeZoneName: 'short',
+          }).formatToParts(d);
+          const tzPart = parts.find((p) => p.type === 'timeZoneName');
+          if (tzPart && /^E[SD]T$/.test(tzPart.value)) tz = tzPart.value;
+        } catch (_e) {
+          /* keep generic ET */
+        }
+        return `Last updated: ${dateTxt}, ${timeTxt} ${tz}`;
+      } catch (_e) {
+        /* fall through to date-only path */
+      }
+    }
+  }
+
+  // 2) Fall back to the date-only `last_updated` field.
+  const dateOnly = typeof data.last_updated === 'string' ? data.last_updated : null;
+  if (dateOnly) {
+    // Parse YYYY-MM-DD as a local-noon date to avoid timezone day shifts.
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOnly);
+    if (m) {
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+      if (!Number.isNaN(d.getTime())) {
+        try {
+          const dateTxt = new Intl.DateTimeFormat('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }).format(d);
+          return `Last updated: ${dateTxt}`;
+        } catch (_e) {
+          return `Last updated: ${dateOnly}`;
+        }
+      }
+    }
+    return `Last updated: ${dateOnly}`;
+  }
+
+  return null;
+}
+
 function setText(field, value) {
   if (value === null || value === undefined) return;
   document.querySelectorAll(`[data-field="${field}"]`).forEach((el) => {
@@ -265,6 +345,9 @@ function applyCopyLocale(currency) {
 //   unit-currency-code      → "USD" or "CAD"
 //   fx-meta-text            → "Reference only · USD shown natively." (USD)
 //                              or "1 USD ≈ X.XXXX CAD · Bank of Canada YYYY-MM-DD" (CAD)
+//   last-updated-text       → "Last updated: <date> [, <time> ET]" derived from
+//                              copper-signal.json `generated_at` (preferred) or
+//                              `last_updated` (date-only fallback).
 //   method-* / calc-*       → formatted strings written into the methodology
 //                              table and stacked calculation block.
 
@@ -303,6 +386,12 @@ function render() {
     fxMeta = 'CAD rate unavailable · showing USD reference values.';
   }
   setText('fx-meta-text', fxMeta);
+
+  // ---- "Last updated" caption -------------------------------------------
+  // Currency-independent: the timestamp reflects when the data file was
+  // generated, not which display currency the user picked.
+  const lastUpdatedTxt = fmtLastUpdated(data);
+  if (lastUpdatedTxt) setText('last-updated-text', lastUpdatedTxt);
 
   // ---- Copper market card -------------------------------------------------
   const c = data.copper || {};
