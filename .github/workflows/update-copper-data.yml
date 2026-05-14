@@ -19,9 +19,9 @@ on:
   workflow_dispatch:
     inputs:
       fetch_sources:
-        description: "Attempt to fetch live source values (Stooq, Rockaway). 'true' or 'false'."
+        description: "Attempt to fetch live source values (Yahoo HG=F, Bank of Canada). 'true' or 'false'. Scheduled runs always fetch; this input only affects manual runs."
         required: false
-        default: "false"
+        default: "true"
       copper_override:
         description: "Manual override for copper reference price (USD/lb). Leave blank to skip."
         required: false
@@ -80,14 +80,36 @@ jobs:
       - name: Run updater
         # Run unconditionally on workflow_dispatch; on schedule, only when
         # the guard's `run` output is true.
+        #
+        # FETCH_SOURCES policy:
+        #   - schedule events ALWAYS fetch live sources (FETCH_SOURCES=1).
+        #     This is the whole point of the scheduled run; a timestamp-only
+        #     bump on a cron tick would defeat the purpose. A regression
+        #     where schedule runs landed with FETCH_SOURCES=0 was observed
+        #     on the May 14 run and is what this guard rail prevents.
+        #   - workflow_dispatch respects the `fetch_sources` input (defaults
+        #     to 'true'; set to 'false' from the UI for a timestamp-only
+        #     manual run, e.g. when re-publishing after a copy-only edit).
+        #   - any other event_name (none configured today, defensive) goes
+        #     through the same input-respecting path.
         if: github.event_name != 'schedule' || steps.guard.outputs.run == 'true'
         env:
-          FETCH_SOURCES: ${{ github.event.inputs.fetch_sources == 'true' && '1' || '0' }}
+          FETCH_SOURCES: ${{ github.event_name == 'schedule' && '1' || (github.event.inputs.fetch_sources != 'false' && '1' || '0') }}
           COPPER_OVERRIDE: ${{ github.event.inputs.copper_override }}
           BARE_BRIGHT_OVERRIDE: ${{ github.event.inputs.bare_bright_override }}
           INSULATED_OVERRIDE: ${{ github.event.inputs.insulated_override }}
           FX_USD_CAD_OVERRIDE: ${{ github.event.inputs.fx_usd_cad_override }}
-        run: node scripts/update-copper-data.mjs
+        run: |
+          # Validation: scheduled runs MUST fetch live sources. If something
+          # ever wires FETCH_SOURCES=0 onto a schedule trigger (the May 14
+          # regression), fail loudly instead of silently shipping a
+          # timestamp-only refresh that looks successful in the run log.
+          if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ] && [ "${FETCH_SOURCES:-}" != "1" ]; then
+            echo "::error::Scheduled run resolved FETCH_SOURCES='${FETCH_SOURCES:-<unset>}', expected '1'. Refusing to run a timestamp-only refresh on a schedule trigger."
+            exit 1
+          fi
+          echo "Run updater env FETCH_SOURCES: ${FETCH_SOURCES}"
+          node scripts/update-copper-data.mjs
 
       - name: Commit changes (if any)
         if: github.event_name != 'schedule' || steps.guard.outputs.run == 'true'

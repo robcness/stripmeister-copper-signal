@@ -259,9 +259,19 @@ hardcoded HTML values remain, so the page always renders.
   `workflow_dispatch` is also available and **always bypasses** the
   schedule guard, so a human-initiated rerun is never blocked. The job
   runs `node scripts/update-copper-data.mjs`, which reads the JSON,
-  optionally pulls fresh source values, recomputes deltas and spread,
-  and writes the file back. The workflow commits the file only if
-  something changed.
+  pulls fresh source values, recomputes deltas and spread, and writes
+  the file back. The workflow commits the file only if something
+  changed.
+
+  **Scheduled runs always fetch live sources** (`FETCH_SOURCES=1`) —
+  the workflow hard-codes this for `schedule` events and includes a
+  guard step that fails the run if the resolved value is anything else.
+  This is a regression fence against a May 14 incident where the
+  scheduled workflow shipped a successful-looking but timestamp-only
+  refresh because `FETCH_SOURCES` resolved to `'0'`. Manual
+  `workflow_dispatch` still respects the `fetch_sources` input (default
+  `true`); set it to `false` from the GitHub UI when you specifically
+  want a timestamp-only manual run.
 
   GitHub's `schedule:` cron is UTC-only with no DST or holiday awareness,
   **and scheduled workflows are best-effort: GitHub explicitly warns they
@@ -333,10 +343,13 @@ hardcoded HTML values remain, so the page always renders.
   ```bash
   node scripts/test-schedule-guard.mjs
   ```
-- **Conservative by default.** Without `FETCH_SOURCES=1` the script only
-  refreshes `generated_at` / `last_checked` and leaves market values
-  untouched. That keeps the page stable on a bad-network day and avoids
-  accidentally publishing a wrong number on a partial fetch.
+- **Conservative by default *locally*.** Without `FETCH_SOURCES=1` the
+  script only refreshes `generated_at` / `last_checked` and leaves market
+  values untouched. That keeps the page stable on a bad-network day and
+  avoids accidentally publishing a wrong number on a partial fetch.
+  Scheduled GitHub Actions runs override this default and always fetch
+  live sources — the workflow sets `FETCH_SOURCES=1` for `schedule`
+  events (see the cadence section above).
 
 ### Sources
 
