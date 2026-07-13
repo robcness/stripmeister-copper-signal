@@ -1,54 +1,57 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-10T15:54:02.174Z",
-  "last_updated": "2026-07-10",
-  "last_checked": "2026-07-10T15:54:02.174Z",
+  "generated_at": "2026-07-13T16:03:29.019Z",
+  "last_updated": "2026-07-13",
+  "last_checked": "2026-07-13T16:03:29.019Z",
   "copper": {
-    "reference_price_usd_per_lb": 6.2755,
-    "as_of_date": "2026-07-10",
-    "delta_30d_pct": 0.42,
-    "delta_12mo_pct": 13.11,
-    "delta_5yr_pct": 44.17,
+    "reference_price_usd_per_lb": 6.308,
+    "as_of_date": "2026-07-13",
+    "delta_30d_pct": -1.9,
+    "delta_12mo_pct": 13.41,
+    "delta_5yr_pct": 46.2,
     "history": {
       "close_2021_04_30": 4.468,
       "close_2025_04_30": 4.609,
       "close_2026_04_30": 5.976,
       "latest": {
-        "date": "2026-07-10",
-        "close": 6.2755
+        "date": "2026-07-13",
+        "close": 6.308
       },
       "d30": {
-        "date": "2026-06-10",
-        "close": 6.249
+        "date": "2026-06-13",
+        "close": 6.4305
       },
       "y1": {
-        "date": "2025-07-10",
-        "close": 5.548
+        "date": "2025-07-13",
+        "close": 5.562
       },
-      "y5": null,
+      "y5": {
+        "date": "2021-07-13",
+        "close": 4.3145
+      },
       "d1": {
-        "date": "2026-07-09",
-        "close": 6.215
+        "date": "2026-07-10",
+        "close": 6.2335
       },
       "d5": {
-        "date": "2026-07-02",
-        "close": 6.1145
+        "date": "2026-07-06",
+        "close": 6.178
       }
     },
     "deltas_status": {
       "1d": "positive",
       "5d": "positive",
-      "30d": "positive",
+      "30d": "negative",
       "12mo": "positive",
-      "5yr": "flat"
+      "5yr": "positive"
     },
-    "delta_1d_pct": 0.97,
-    "delta_5d_pct": 2.63,
+    "delta_1d_pct": 1.2,
+    "delta_5d_pct": 2.1,
     "since_last_refresh": {
-      "previous_price_usd_per_lb": 6.275,
-      "previous_generated_at": "2026-07-09T16:11:28.991Z",
-      "delta_usd_per_lb": 0.0005,
-      "delta_pct": 0.01,
+      "previous_price_usd_per_lb": 6.2755,
+      "previous_generated_at": "2026-07-10T15:54:02.174Z",
+      "delta_usd_per_lb": 0.0325,
+      "delta_pct": 0.52,
       "status": "positive"
     }
   },
@@ -73,8 +76,8 @@
       "short_term_risk": 0.2
     },
     "score_min_published": 60,
-    "previous_score": 89,
-    "score_delta": -4,
+    "previous_score": 85,
+    "score_delta": 0,
     "band": "strong",
     "bands": {
       "verify": {
@@ -106,9 +109,9 @@
     "components": {
       "base": 80,
       "daily": 2,
-      "five_day": 2,
-      "thirty_day": 0,
-      "five_year_context": 0,
+      "five_day": 1,
+      "thirty_day": -1,
+      "five_year_context": 2,
       "strip_spread": 1
     },
     "drivers": [
@@ -118,8 +121,8 @@
         "delta": 2
       },
       {
-        "id": "five_day",
-        "label": "5-day copper momentum",
+        "id": "five_year_context",
+        "label": "5-year context",
         "delta": 2
       }
     ],
@@ -200,8 +203,8 @@
   "fx": {
     "base_currency": "USD",
     "quote_currency": "CAD",
-    "usd_to_cad": 1.4169,
-    "as_of_date": "2026-07-09",
+    "usd_to_cad": 1.4146,
+    "as_of_date": "2026-07-10",
     "source": {
       "label": "Bank of Canada Valet — FXUSDCAD",
       "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
