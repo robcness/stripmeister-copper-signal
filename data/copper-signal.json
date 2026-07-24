@@ -1,58 +1,55 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-23T15:30:52.128Z",
-  "last_updated": "2026-07-23",
-  "last_checked": "2026-07-23T15:30:52.128Z",
+  "generated_at": "2026-07-24T15:12:33.485Z",
+  "last_updated": "2026-07-24",
+  "last_checked": "2026-07-24T15:12:33.485Z",
   "copper": {
-    "reference_price_usd_per_lb": 6.3415,
-    "as_of_date": "2026-07-23",
-    "delta_30d_pct": 3.26,
-    "delta_12mo_pct": 9.43,
+    "reference_price_usd_per_lb": 6.3535,
+    "as_of_date": "2026-07-24",
+    "delta_30d_pct": 6.91,
+    "delta_12mo_pct": 9.98,
     "delta_5yr_pct": 43.91,
     "history": {
       "close_2021_04_30": 4.468,
       "close_2025_04_30": 4.609,
       "close_2026_04_30": 5.976,
       "latest": {
-        "date": "2026-07-23",
-        "close": 6.3415
+        "date": "2026-07-24",
+        "close": 6.3535
       },
       "d30": {
-        "date": "2026-06-23",
-        "close": 6.141
+        "date": "2026-06-24",
+        "close": 5.943
       },
       "y1": {
-        "date": "2025-07-23",
-        "close": 5.795
+        "date": "2025-07-24",
+        "close": 5.777
       },
-      "y5": {
-        "date": "2021-07-23",
-        "close": 4.4065
-      },
+      "y5": null,
       "d1": {
-        "date": "2026-07-22",
-        "close": 6.451
+        "date": "2026-07-23",
+        "close": 6.305
       },
       "d5": {
-        "date": "2026-07-16",
-        "close": 6.296
+        "date": "2026-07-17",
+        "close": 6.22
       }
     },
     "deltas_status": {
-      "1d": "negative",
+      "1d": "positive",
       "5d": "positive",
       "30d": "positive",
       "12mo": "positive",
-      "5yr": "positive"
+      "5yr": "flat"
     },
-    "delta_1d_pct": -1.7,
-    "delta_5d_pct": 0.72,
+    "delta_1d_pct": 0.77,
+    "delta_5d_pct": 2.15,
     "since_last_refresh": {
-      "previous_price_usd_per_lb": 6.506,
-      "previous_generated_at": "2026-07-22T15:19:58.674Z",
-      "delta_usd_per_lb": -0.1645,
-      "delta_pct": -2.53,
-      "status": "negative"
+      "previous_price_usd_per_lb": 6.3415,
+      "previous_generated_at": "2026-07-23T15:30:52.128Z",
+      "delta_usd_per_lb": 0.012,
+      "delta_pct": 0.19,
+      "status": "positive"
     }
   },
   "scrap": {
@@ -64,11 +61,11 @@
     "spread_unit_lbs": 50
   },
   "signal": {
-    "score": 81,
+    "score": 86,
     "score_max": 100,
-    "label": "Good time to buy",
-    "headline": "Recovery window open",
-    "summary": "Copper is supportive of the recovery math at current reference rates. If you have wire on hand, run the recovery math now. Reference signal — not financial advice.",
+    "label": "Strong buying window",
+    "headline": "Strong recovery window",
+    "summary": "Copper is firm and trending up across multiple horizons. If you have wire on hand, run the recovery math now. Reference signal — not financial advice.",
     "weights": {
       "price_momentum": 0.35,
       "five_year_context": 0.25,
@@ -76,9 +73,9 @@
       "short_term_risk": 0.2
     },
     "score_min_published": 60,
-    "previous_score": 86,
-    "score_delta": -5,
-    "band": "good",
+    "previous_score": 81,
+    "score_delta": 5,
+    "band": "strong",
     "bands": {
       "verify": {
         "min": 0,
@@ -108,21 +105,21 @@
     },
     "components": {
       "base": 80,
-      "daily": -3,
-      "five_day": 0,
-      "thirty_day": 1,
-      "five_year_context": 2,
+      "daily": 2,
+      "five_day": 1,
+      "thirty_day": 2,
+      "five_year_context": 0,
       "strip_spread": 1
     },
     "drivers": [
       {
         "id": "daily",
         "label": "1-day copper move",
-        "delta": -3
+        "delta": 2
       },
       {
-        "id": "five_year_context",
-        "label": "5-year context",
+        "id": "thirty_day",
+        "label": "30-day copper momentum",
         "delta": 2
       }
     ],
@@ -203,8 +200,8 @@
   "fx": {
     "base_currency": "USD",
     "quote_currency": "CAD",
-    "usd_to_cad": 1.4088,
-    "as_of_date": "2026-07-22",
+    "usd_to_cad": 1.4083,
+    "as_of_date": "2026-07-23",
     "source": {
       "label": "Bank of Canada Valet — FXUSDCAD",
       "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
