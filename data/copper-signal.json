@@ -1,58 +1,58 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-09T17:13:08.446Z",
-  "last_updated": "2026-09-09",
-  "last_checked": "2026-09-09T17:13:08.446Z",
+  "generated_at": "2026-09-10T17:04:22.130Z",
+  "last_updated": "2026-09-10",
+  "last_checked": "2026-09-10T17:04:22.130Z",
   "copper": {
-    "reference_price_usd_per_lb": 6.8875,
-    "as_of_date": "2026-09-09",
-    "delta_30d_pct": 4.44,
-    "delta_12mo_pct": 53.02,
-    "delta_5yr_pct": 60.79,
+    "reference_price_usd_per_lb": 6.5405,
+    "as_of_date": "2026-09-10",
+    "delta_30d_pct": -1.08,
+    "delta_12mo_pct": 43.75,
+    "delta_5yr_pct": 47.04,
     "history": {
       "close_2021_04_30": 4.468,
       "close_2025_04_30": 4.609,
       "close_2026_04_30": 5.976,
       "latest": {
-        "date": "2026-09-09",
-        "close": 6.8875
+        "date": "2026-09-10",
+        "close": 6.5405
       },
       "d30": {
-        "date": "2026-08-10",
-        "close": 6.5945
+        "date": "2026-08-11",
+        "close": 6.612
       },
       "y1": {
-        "date": "2025-09-09",
-        "close": 4.501
+        "date": "2025-09-10",
+        "close": 4.55
       },
       "y5": {
-        "date": "2021-09-09",
-        "close": 4.2835
+        "date": "2021-09-10",
+        "close": 4.448
       },
       "d1": {
-        "date": "2026-09-08",
-        "close": 6.739
+        "date": "2026-09-09",
+        "close": 6.8035
       },
       "d5": {
-        "date": "2026-09-01",
-        "close": 6.5065
+        "date": "2026-09-02",
+        "close": 6.501
       }
     },
     "deltas_status": {
-      "1d": "positive",
+      "1d": "negative",
       "5d": "positive",
-      "30d": "positive",
+      "30d": "negative",
       "12mo": "positive",
       "5yr": "positive"
     },
-    "delta_1d_pct": 2.2,
-    "delta_5d_pct": 5.86,
+    "delta_1d_pct": -3.87,
+    "delta_5d_pct": 0.61,
     "since_last_refresh": {
-      "previous_price_usd_per_lb": 6.8305,
-      "previous_generated_at": "2026-09-08T17:20:50.347Z",
-      "delta_usd_per_lb": 0.057,
-      "delta_pct": 0.83,
-      "status": "positive"
+      "previous_price_usd_per_lb": 6.8875,
+      "previous_generated_at": "2026-09-09T17:13:08.446Z",
+      "delta_usd_per_lb": -0.347,
+      "delta_pct": -5.04,
+      "status": "negative"
     }
   },
   "scrap": {
@@ -64,11 +64,11 @@
     "spread_unit_lbs": 50
   },
   "signal": {
-    "score": 93,
+    "score": 79,
     "score_max": 100,
-    "label": "Exceptional recovery window",
-    "headline": "Exceptional recovery window",
-    "summary": "Copper momentum is unusually strong across short and long horizons. If you have wire on hand, run the recovery math now. Reference signal — not financial advice.",
+    "label": "Good time to buy",
+    "headline": "Recovery window open",
+    "summary": "Copper is supportive of the recovery math at current reference rates. If you have wire on hand, run the recovery math now. Reference signal — not financial advice.",
     "weights": {
       "price_momentum": 0.35,
       "five_year_context": 0.25,
@@ -76,9 +76,9 @@
       "short_term_risk": 0.2
     },
     "score_min_published": 60,
-    "previous_score": 91,
-    "score_delta": 2,
-    "band": "exceptional",
+    "previous_score": 93,
+    "score_delta": -14,
+    "band": "good",
     "bands": {
       "verify": {
         "min": 0,
@@ -108,22 +108,22 @@
     },
     "components": {
       "base": 80,
-      "daily": 4,
-      "five_day": 4,
-      "thirty_day": 1,
-      "five_year_context": 3,
+      "daily": -4,
+      "five_day": 0,
+      "thirty_day": 0,
+      "five_year_context": 2,
       "strip_spread": 1
     },
     "drivers": [
       {
         "id": "daily",
         "label": "1-day copper move",
-        "delta": 4
+        "delta": -4
       },
       {
-        "id": "five_day",
-        "label": "5-day copper momentum",
-        "delta": 4
+        "id": "five_year_context",
+        "label": "5-year context",
+        "delta": 2
       }
     ],
     "weights_note": "Score = 80 base + daily (±4) + 5-day (±5) + 30-day (±5) + 5-year context (-2 to +3) + strip spread (±2). Conservative caps. Reference signal, not financial advice."
@@ -203,8 +203,8 @@
   "fx": {
     "base_currency": "USD",
     "quote_currency": "CAD",
-    "usd_to_cad": 1.3784,
-    "as_of_date": "2026-09-08",
+    "usd_to_cad": 1.3798,
+    "as_of_date": "2026-09-09",
     "source": {
       "label": "Bank of Canada Valet — FXUSDCAD",
       "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
