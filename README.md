@@ -1,6 +1,6 @@
 # StripMeister Copper Recovery Signal
 
-Private internal prototype for an embeddable StripMeister website widget. **Do not publish publicly.**
+Public prototype of an embeddable StripMeister website widget, published as a working demonstration. The source is public, and a live demo is at <https://robcness.github.io/stripmeister-copper-signal/>.
 
 ## Purpose
 
