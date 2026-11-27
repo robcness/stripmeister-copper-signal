@@ -291,11 +291,19 @@ hardcoded HTML values remain, so the page always renders.
 
   1. local ET date is Mon–Fri
   2. local ET date is not on the market-holiday list
-  3. local time is at or after 09:30 ET and strictly before the 16:30
-     ET cutoff (≈ 30 min after the U.S. equity close — past which a
-     "today's open" refresh no longer makes sense)
+  3. local time is at or after 09:30 ET and before the cutoff, which
+     by default is the end of that ET day (24:00), so a late start
+     still refreshes the day's data
   4. `data/copper-signal.json` `generated_at` is NOT already on the same
      ET date at/after 09:30 ET
+
+  The cutoff used to be 16:30 ET. In November 2026 GitHub started the
+  scheduled runs 7 to 11 hours late (16:24 to 20:48 ET), every run after
+  16:30 ET was skipped, and the published data stayed at 2026-11-20 for
+  a week. A late refresh is better than a stale widget, and the data
+  file carries its own timestamps, so the guard now accepts any start up
+  to the end of the ET day. A start after midnight ET falls on the next
+  ET date before 09:30 and is skipped; that day's own crons then run.
 
   Rule (4) is what dedupes the second cron entry and any GitHub-delayed
   duplicate firing: the first eligible run of the day refreshes the
@@ -328,9 +336,11 @@ hardcoded HTML values remain, so the page always renders.
   refreshing the dashboard on Canada Day or Boxing Day would be off-tone
   even if CME were trading.
 
-  Guard logic is unit-tested in `scripts/test-schedule-guard.mjs` — 89
+  Guard logic is unit-tested in `scripts/test-schedule-guard.mjs` — 106
   assertions covering exact 09:30 in EDT and EST, before-09:30 SKIP,
-  after-16:30 cutoff SKIP, weekend skips, U.S.-only / Canadian-only /
+  late starts up to 23:59 ET (RUN, including the November 2026 late
+  starts as regressions), an after-midnight start (SKIP), an explicit
+  earlier cutoff (still honoured), weekend skips, U.S.-only / Canadian-only /
   shared holiday skips, the overlap dedupe rule, the `holidayDetail()`
   lookup, custom holiday override, the May-7 delayed-firing regression
   (11:42 ET delayed run with previous-day `generated_at` → RUN), the

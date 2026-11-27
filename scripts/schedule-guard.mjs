@@ -27,9 +27,10 @@
  *
  *   1. local America/New_York date is Mon–Fri
  *   2. local America/New_York date is not on the market-holiday list
- *   3. local time is at or after 09:30 ET and before a reasonable cutoff
- *      (16:30 ET by default — i.e. before the U.S. market close, after
- *      which a "today's open" data refresh no longer makes sense), AND
+ *   3. local time is at or after 09:30 ET and before the cutoff. The
+ *      default cutoff is the end of that ET day (24:00), so a late start
+ *      still refreshes the data for the day. An earlier cutoff can be
+ *      passed to `decide()` if one is ever wanted, AND
  *   4. data/copper-signal.json has NOT already been refreshed for the
  *      same local ET date at/after 09:30 ET.
  *
@@ -41,6 +42,20 @@
  * earlier ET date — or from the same ET date but BEFORE 09:30 (e.g.
  * a manual midnight refresh) — does not count as "already refreshed"
  * and the scheduled run is allowed to proceed.
+ *
+ * Why the default cutoff is the end of the day
+ * -----------------------------------------
+ * The cutoff used to be 16:30 ET. In November 2026 GitHub started this
+ * repository's scheduled runs 7 to 11 hours late: the 13:30 and 14:30
+ * UTC crons began between 21:24 UTC and 01:48 UTC, which is 16:24 to
+ * 20:48 ET. Every run after 16:30 ET was skipped with "after 16:30
+ * cutoff", and the published data stayed at 2026-11-20 for a week.
+ * A late refresh is better than a stale widget, and the data file
+ * carries its own timestamps, so the guard now accepts any start up
+ * to the end of the ET day. Rule (4) still keeps it to one refresh a
+ * day. A run that GitHub starts after midnight ET falls on the next
+ * ET date before 09:30 and is skipped by rule (3); that day's own
+ * crons then run as usual.
  *
  * Manual `workflow_dispatch` runs always bypass this guard at the
  * workflow level — see the workflow YAML. This script is only invoked
@@ -222,11 +237,12 @@ export function localFields(now, tz) {
  *   holidays         Array<string> of YYYY-MM-DD — defaults to DEFAULT_HOLIDAYS.
  *   targetHour       number — defaults to 9. Earliest local hour eligible.
  *   targetMin        number — defaults to 30. Earliest local minute eligible.
- *   cutoffHour       number — defaults to 16. Latest local hour eligible (exclusive of cutoffMin).
- *   cutoffMin        number — defaults to 30. Latest local minute eligible.
+ *   cutoffHour       number — defaults to 24. Latest local hour eligible (exclusive of cutoffMin).
+ *   cutoffMin        number — defaults to 0. Latest local minute eligible.
  *                    Together (cutoffHour:cutoffMin) form the half-open
  *                    upper bound: local time must be strictly < cutoff.
- *                    Default 16:30 ET ≈ 30 min after U.S. equity close.
+ *                    Default 24:00 = the end of the local day, so a
+ *                    late GitHub start still refreshes that day's data.
  *   lastGeneratedAt  string|null — ISO timestamp of the previous refresh.
  *                    If it falls on the same ET date AND at/after 09:30 ET,
  *                    the run is skipped as "already refreshed today" so the
@@ -240,8 +256,8 @@ export function decide({
   holidays = DEFAULT_HOLIDAYS,
   targetHour = 9,
   targetMin = 30,
-  cutoffHour = 16,
-  cutoffMin = 30,
+  cutoffHour = 24,
+  cutoffMin = 0,
   lastGeneratedAt = null,
 } = {}) {
   const local = localFields(now, tz);
@@ -261,7 +277,7 @@ export function decide({
   }
 
   // 3. Time window — must be at/after 09:30 ET and strictly before the
-  //    cutoff (default 16:30 ET).
+  //    cutoff (default 24:00 ET, i.e. any time up to the end of the day).
   const localMinutes = local.hour * 60 + local.minute;
   const targetMinutes = targetHour * 60 + targetMin;
   const cutoffMinutes = cutoffHour * 60 + cutoffMin;

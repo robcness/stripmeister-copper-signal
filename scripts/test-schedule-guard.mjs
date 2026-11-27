@@ -5,7 +5,12 @@
  * Unit tests for scripts/schedule-guard.mjs `decide()`. Covers:
  *   - Exact 09:30 ET (EDT and EST) → RUN
  *   - Before 09:30 ET → SKIP
- *   - After 16:30 ET cutoff → SKIP
+ *   - Late starts (16:30, 17:00, 20:48, 23:59 ET) → RUN, since the default
+ *     cutoff is now the end of the ET day (regression: the November 2026
+ *     week when GitHub started the crons 7 to 11 hours late)
+ *   - A start after midnight ET → SKIP (before 09:30 on the next ET date)
+ *   - A second late start the same ET day → SKIP (already refreshed)
+ *   - An explicit earlier cutoff passed to decide() is still honoured
  *   - Weekend (Saturday + Sunday) → SKIP
  *   - U.S. market holiday → SKIP
  *   - Custom holiday list honored
@@ -78,24 +83,87 @@ header("Scenario 3: 13:29 UTC Tue (EDT) → 09:29 EDT (SKIP, before window)");
   check("reason mentions before", /before/.test(d.reason), true);
 }
 
-// ---------- Scenario 4: After 16:30 ET cutoff → SKIP --------------------
-// 2026-06-09 20:30 UTC EDT == 16:30 EDT. cutoff is half-open at 16:30 →
-// SKIP at 16:30 itself, and SKIP after.
-header("Scenario 4: 20:30 UTC Tue EDT → 16:30 EDT (SKIP, at cutoff)");
+// ---------- Scenario 4: Late starts RUN (default cutoff = end of ET day)
+// The cutoff used to be 16:30 ET. GitHub then started this repository's
+// scheduled runs 7 to 11 hours late for a week (November 2026), every
+// one of them after 16:30 ET, and the data went stale. A late start now
+// refreshes the data for that ET day.
+header("Scenario 4: 20:30 UTC Tue EDT → 16:30 EDT (RUN, late start accepted)");
 {
   const d = decide({ now: new Date("2026-06-09T20:30:00Z") });
-  check("run", d.run, false);
+  check("run", d.run, true);
   check("local.hour", d.local.hour, 16);
   check("local.minute", d.local.minute, 30);
-  check("reason mentions cutoff", /cutoff/.test(d.reason), true);
+  check("reason mentions eligible", /eligible/.test(d.reason), true);
 }
 
-header("Scenario 4b: 21:00 UTC Tue EDT → 17:00 EDT (SKIP, past cutoff)");
+header("Scenario 4b: 21:00 UTC Tue EDT → 17:00 EDT (RUN, late start accepted)");
 {
   const d = decide({ now: new Date("2026-06-09T21:00:00Z") });
-  check("run", d.run, false);
+  check("run", d.run, true);
   check("local.hour", d.local.hour, 17);
-  check("reason mentions cutoff", /cutoff/.test(d.reason), true);
+}
+
+// Observed on 2026-11-23 (Monday, EST): the cron started at 01:48 UTC on
+// the 24th, which is 20:48 ET on the 23rd. The file was last refreshed on
+// 2026-11-20. The old guard logged "after 16:30 cutoff" and skipped.
+header("Scenario 4c: observed 2026-11-24T01:48Z → Mon 20:48 EST, data from 11-20 (RUN)");
+{
+  const d = decide({
+    now: new Date("2026-11-24T01:48:07Z"),
+    lastGeneratedAt: "2026-11-20T21:25:07.317Z",
+  });
+  check("run", d.run, true);
+  check("local.date", d.local.date, "2026-11-23");
+  check("local.hour", d.local.hour, 20);
+  check("local.weekday Mon", d.local.weekday, 1);
+}
+
+// Observed on 2026-11-25 (Wednesday, EST): two late starts, 17:39 and
+// 18:12 ET. The first must RUN; the second must SKIP as already refreshed.
+header("Scenario 4d: observed 2026-11-25 late pair → first RUNs, second SKIPs");
+{
+  const first = decide({
+    now: new Date("2026-11-25T22:39:31Z"),
+    lastGeneratedAt: "2026-11-20T21:25:07.317Z",
+  });
+  check("first run", first.run, true);
+  check("first local.hour", first.local.hour, 17);
+  const second = decide({
+    now: new Date("2026-11-25T23:12:48Z"),
+    lastGeneratedAt: "2026-11-25T22:39:40Z",
+  });
+  check("second run", second.run, false);
+  check("second reason mentions already refreshed", /already refreshed/.test(second.reason), true);
+}
+
+header("Scenario 4e: 04:59 UTC Wed (EST) → Tue 23:59 EST (RUN, last minute of the day)");
+{
+  const d = decide({ now: new Date("2026-12-09T04:59:00Z") });
+  check("run", d.run, true);
+  check("local.date", d.local.date, "2026-12-08");
+  check("local.hour", d.local.hour, 23);
+  check("local.minute", d.local.minute, 59);
+}
+
+// A start after midnight ET belongs to the next ET date and is before
+// 09:30 there, so it is skipped; that day's own crons run as usual.
+header("Scenario 4f: 05:10 UTC Wed (EST) → Wed 00:10 EST (SKIP, before window)");
+{
+  const d = decide({ now: new Date("2026-12-09T05:10:00Z") });
+  check("run", d.run, false);
+  check("local.date", d.local.date, "2026-12-09");
+  check("reason mentions before", /before/.test(d.reason), true);
+}
+
+// The cutoff is still a parameter. An explicit 16:30 behaves as before.
+header("Scenario 4g: explicit 16:30 cutoff is honoured (SKIP at and after it)");
+{
+  const at = decide({ now: new Date("2026-06-09T20:30:00Z"), cutoffHour: 16, cutoffMin: 30 });
+  check("run at cutoff", at.run, false);
+  check("reason mentions cutoff", /cutoff/.test(at.reason), true);
+  const before = decide({ now: new Date("2026-06-09T20:29:00Z"), cutoffHour: 16, cutoffMin: 30 });
+  check("run one minute before cutoff", before.run, true);
 }
 
 // ---------- Scenario 5: Saturday → SKIP weekend -------------------------
@@ -168,7 +236,7 @@ header("Scenario 10: America/Toronto 13:30 UTC EDT (RUN)");
 // "outside 09:30 window, drift 132m". New guard must RUN, because:
 //   - it is a weekday (Thursday 2026-05-07)
 //   - it is not on the holiday list
-//   - 11:42 ET is at/after 09:30 and before the 16:30 cutoff
+//   - 11:42 ET is at/after 09:30 and before the cutoff
 //   - the previous data refresh was the prior business day
 header("Scenario 11: Delayed 11:42 ET with previous-day generated_at (RUN)");
 {
